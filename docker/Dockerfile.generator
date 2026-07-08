@@ -1,0 +1,29 @@
+FROM python:3.11-slim-bookworm
+
+# Copy uv binary from official image
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy dependency specifications
+COPY pyproject.toml uv.lock ./
+
+# Synchronize dependencies excluding pipeline and dev groups to keep image slim
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project --no-group pipeline --no-group dev
+
+# Put virtual environment on the PATH
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH=/app
+
+# Copy application files
+COPY src/ /app/src/
+COPY config/config.yaml /app/config/config.yaml
+
+CMD ["python", "src/generator.py"]

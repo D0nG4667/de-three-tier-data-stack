@@ -1,0 +1,44 @@
+raw_db:
+  host: "db-raw"
+  port: 5432
+  user: "postgres"
+  password: "postgres_raw_password"
+  database: "bristol_raw"
+
+olap_db:
+  host: "db-olap"
+  port: 5432
+  user: "postgres"
+  password: "postgres_olap_password"
+  database: "bristol_olap"
+
+nosql_db:
+  host: "db-nosql"
+  port: 27017
+  user: "root"
+  password: "mongo_root_password"
+  database: "bristol_nosql"
+
+ingestion:
+  mode: "csv"  # Set to "csv" to mount/ingest the real UWE dataset, or "simulate" for high-fidelity simulation
+  csv_path: "/app/data/air-quality-data-continuous.csv"
+  download_url: "https://fetstudy.uwe.ac.uk/~p-chatterjee/2022-23/dmf/assignment/air-quality-data-continuous.zip"
+  download_on_missing: true
+
+etl:
+  crop_start_date: "2010-01-01"
+  crop_end_date: "2022-10-05"
+  chunk_size: 10000
+
+validation:
+  acceptable_nox_min: 0.0
+  acceptable_nox_max: 2000.0  # Max realistic NOx peak in mcg/m3
+  acceptable_temp_min: -20.0
+  acceptable_temp_max: 45.0
+  acceptable_humidity_min: 0.0
+  acceptable_humidity_max: 100.0
+
+generator:
+  start_year: 2010
+  end_year: 2022
+  random_seed: 42

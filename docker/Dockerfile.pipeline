@@ -1,0 +1,36 @@
+FROM python:3.11-slim-bookworm
+
+# Copy uv binary from official image
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy dependency specifications
+COPY pyproject.toml uv.lock ./
+
+# Build-time argument to dynamically specify package groups to synchronize (default is pipeline and dev)
+ARG UV_GROUPS="--group pipeline --group dev"
+
+# Synchronize dependencies using caching mounts for faster builds
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project $UV_GROUPS
+
+# Put virtual environment on the PATH
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH=/app
+
+# Copy application source files
+COPY src/ /app/src/
+COPY config/ /app/config/
+COPY tests/ /app/tests/
+COPY dbt_project/ /app/dbt_project/
+
+# Default command is running the pipeline
+CMD ["python", "src/pipeline.py"]
