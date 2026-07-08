@@ -223,3 +223,7 @@ scratch/*
 # CSV
 *.csv
 
+# Data directory
+data/*
+!data/.gitkeep
+
