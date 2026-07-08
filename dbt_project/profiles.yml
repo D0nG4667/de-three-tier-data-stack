@@ -1,0 +1,12 @@
+bristol_profile:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: db-olap
+      port: 5432
+      user: postgres
+      password: postgres_olap_password
+      dbname: bristol_olap
+      schema: public
+      threads: 4

@@ -1,0 +1,47 @@
+version: 2
+
+sources:
+  - name: raw_sources
+    database: bristol_olap
+    schema: public
+    tables:
+      - name: constituencies
+        description: Table mapping constituencies to their MPs
+        columns:
+          - name: id
+            data_tests:
+              - unique
+              - not_null
+
+      - name: stations
+        description: Table containing geographic metadata of the 19 monitoring stations
+        columns:
+          - name: site_id
+            data_tests:
+              - unique
+              - not_null
+          - name: constituency_id
+            data_tests:
+              - relationships:
+                  to: source('raw_sources', 'constituencies')
+                  field: id
+
+      - name: readings
+        description: Main fact table of hourly pollutant and weather observations
+        columns:
+          - name: id
+            data_tests:
+              - unique
+              - not_null
+          - name: site_id
+            data_tests:
+              - not_null
+              - relationships:
+                  to: source('raw_sources', 'stations')
+                  field: site_id
+          - name: date_time
+            data_tests:
+              - not_null
+          - name: row_checksum
+            data_tests:
+              - not_null

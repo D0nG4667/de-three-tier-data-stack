@@ -1,0 +1,30 @@
+version: 2
+
+models:
+  - name: fact_reading
+    description: Mart model containing clean, deduplicated hourly pollutant and weather observations.
+    columns:
+      - name: reading_id
+        description: Unique identifier for each observation.
+        data_tests:
+          - unique
+          - not_null
+
+      - name: station_id
+        description: Reference to the monitoring station.
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('dim_station')
+              field: station_id
+
+      - name: observation_timestamp
+        description: Observation timestamp.
+        data_tests:
+          - not_null
+
+      - name: row_checksum
+        description: MD5 checksum of the observation values, guaranteed unique post-deduplication.
+        data_tests:
+          - unique
+          - not_null
