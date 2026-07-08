@@ -1,0 +1,243 @@
+services:
+  db-raw:
+    image: postgres:18-alpine
+    container_name: db-raw
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${RAW_DB_NAME}
+      POSTGRES_USER: ${RAW_DB_USER}
+      POSTGRES_PASSWORD: ${RAW_DB_PASSWORD}
+    volumes:
+      - raw_db_data:/var/lib/postgresql
+    networks:
+      - bristol-air-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${RAW_DB_USER} -d ${RAW_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2G
+
+  db-olap:
+    image: postgres:18-alpine
+    container_name: db-olap
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${OLAP_DB_NAME}
+      POSTGRES_USER: ${OLAP_DB_USER}
+      POSTGRES_PASSWORD: ${OLAP_DB_PASSWORD}
+    volumes:
+      - olap_db_data:/var/lib/postgresql
+    networks:
+      - bristol-air-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${OLAP_DB_USER} -d ${OLAP_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+
+  db-nosql:
+    image: mongo:8.3.4
+    container_name: db-nosql
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${NOSQL_DB_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${NOSQL_DB_ROOT_PASSWORD}
+    volumes:
+      - nosql_db_data:/data/db
+    networks:
+      - bristol-air-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2G
+
+  pgadmin:
+    image: dpage/pgadmin4:9.16
+    container_name: pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+    ports:
+      - "127.0.0.1:5050:80"
+    depends_on:
+      db-raw:
+        condition: service_healthy
+      db-olap:
+        condition: service_healthy
+    networks:
+      - bristol-air-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  mongo-express:
+    image: mongo-express:1.0.2-20-alpine3.19
+    container_name: mongo-express
+    restart: unless-stopped
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${NOSQL_DB_ROOT_USER}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${NOSQL_DB_ROOT_PASSWORD}
+      ME_CONFIG_MONGODB_SERVER: db-nosql
+    ports:
+      - "127.0.0.1:8081:8081"
+    depends_on:
+      db-nosql:
+        condition: service_healthy
+    networks:
+      - bristol-air-net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+  generator:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.generator
+    container_name: data-generator
+    restart: unless-stopped
+    profiles:
+      - manual
+    environment:
+      RAW_DB_HOST: db-raw
+      RAW_DB_PORT: 5432
+      RAW_DB_USER: ${RAW_DB_USER}
+      RAW_DB_PASSWORD: ${RAW_DB_PASSWORD}
+      RAW_DB_NAME: ${RAW_DB_NAME}
+    depends_on:
+      db-raw:
+        condition: service_healthy
+    volumes:
+      - ./config/config.yaml:/app/config/config.yaml:ro
+      - ./data:/app/data
+    networks:
+      - bristol-air-net
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+  pipeline:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.pipeline
+    container_name: etl-pipeline
+    restart: unless-stopped
+    profiles:
+      - manual
+    environment:
+      RAW_DB_HOST: db-raw
+      RAW_DB_PORT: 5432
+      RAW_DB_USER: ${RAW_DB_USER}
+      RAW_DB_PASSWORD: ${RAW_DB_PASSWORD}
+      RAW_DB_NAME: ${RAW_DB_NAME}
+      OLAP_DB_HOST: db-olap
+      OLAP_DB_PORT: 5432
+      OLAP_DB_USER: ${OLAP_DB_USER}
+      OLAP_DB_PASSWORD: ${OLAP_DB_PASSWORD}
+      OLAP_DB_NAME: ${OLAP_DB_NAME}
+      NOSQL_DB_HOST: db-nosql
+      NOSQL_DB_PORT: 27017
+      NOSQL_DB_USER: ${NOSQL_DB_ROOT_USER}
+      NOSQL_DB_PASSWORD: ${NOSQL_DB_ROOT_PASSWORD}
+      NOSQL_DB_NAME: ${NOSQL_DB_NAME}
+    depends_on:
+      db-raw:
+        condition: service_healthy
+      db-olap:
+        condition: service_healthy
+      db-nosql:
+        condition: service_healthy
+    volumes:
+      - ./config/config.yaml:/app/config/config.yaml:ro
+      - ./dbt_project:/app/dbt_project
+      - ./data:/app/data
+    networks:
+      - bristol-air-net
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2G
+
+  dagster:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.pipeline
+      args:
+        - UV_GROUPS=--group pipeline --group dev --group orch
+    container_name: dagster-webserver
+    restart: unless-stopped
+    environment:
+      RAW_DB_HOST: db-raw
+      RAW_DB_PORT: 5432
+      RAW_DB_USER: ${RAW_DB_USER}
+      RAW_DB_PASSWORD: ${RAW_DB_PASSWORD}
+      RAW_DB_NAME: ${RAW_DB_NAME}
+      OLAP_DB_HOST: db-olap
+      OLAP_DB_PORT: 5432
+      OLAP_DB_USER: ${OLAP_DB_USER}
+      OLAP_DB_PASSWORD: ${OLAP_DB_PASSWORD}
+      OLAP_DB_NAME: ${OLAP_DB_NAME}
+      NOSQL_DB_HOST: db-nosql
+      NOSQL_DB_PORT: 27017
+      NOSQL_DB_USER: ${NOSQL_DB_ROOT_USER}
+      NOSQL_DB_PASSWORD: ${NOSQL_DB_ROOT_PASSWORD}
+      NOSQL_DB_NAME: ${NOSQL_DB_NAME}
+      DAGSTER_HOME: /app
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      db-raw:
+        condition: service_healthy
+      db-olap:
+        condition: service_healthy
+      db-nosql:
+        condition: service_healthy
+    volumes:
+      - ./config/config.yaml:/app/config/config.yaml:ro
+      - ./dbt_project:/app/dbt_project
+      - ./data:/app/data
+      - ./dagster_orch:/app/dagster_orch
+    networks:
+      - bristol-air-net
+    command: ["dagster", "dev", "-h", "0.0.0.0", "-p", "3000", "-f", "/app/dagster_orch/definitions.py"]
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 2G
+
+volumes:
+  raw_db_data:
+    driver: local
+  olap_db_data:
+    driver: local
+  nosql_db_data:
+    driver: local
+
+networks:
+  bristol-air-net:
+    driver: bridge
+    name: bristol-air-net
