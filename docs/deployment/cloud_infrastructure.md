@@ -14,13 +14,13 @@ flowchart TD
     ENG[Engineers & Client Apps] -->|HTTPS| DAG_UI[Dagster Cloud / Web Console]
 
     %% Compute Layer
-    subgraph Compute: AWS ECS (Fargate)
+    subgraph Compute ["Compute: AWS ECS (Fargate)"]
         DAG_AGENT[Dagster Daemon Agent]
         PIPELINE[ETL Execution Container]
     end
 
     %% Storage Layer
-    subgraph Storage: Managed Databases
+    subgraph Storage ["Storage: Managed Databases"]
         RDS[(Amazon RDS: PostgreSQL)]
         ATLAS[(MongoDB Atlas)]
     end
