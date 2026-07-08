@@ -1,0 +1,26 @@
+[project]
+name = "de-three-tier-data-stack"
+version = "0.1.0"
+description = "Bristol Air Quality Three-Tier Data Stack"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas==3.0.3",
+    "psycopg2-binary==2.9.12",
+    "pyyaml==6.0.3"
+]
+
+[dependency-groups]
+pipeline = [
+    "pymongo==4.17.0",
+    "dbt-core==1.11.12",
+    "dbt-postgres==1.10.2"
+]
+orch = [
+    "dagster==1.13.12",
+    "dagster-webserver==1.13.12",
+    "dagster-dbt==0.29.12"
+]
+dev = [
+    "pytest==8.0.0"
+]
