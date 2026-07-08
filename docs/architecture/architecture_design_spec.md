@@ -119,13 +119,13 @@ Although structured as a Three-Tier database stack, the design conceptually alig
 
 ```mermaid
 flowchart LR
-    subgraph Bronze Layer
+    subgraph Bronze ["Bronze Layer"]
         T1[(PostgreSQL: db-raw)]
     end
-    subgraph Silver Layer
+    subgraph Silver ["Silver Layer"]
         T2[(PostgreSQL: db-olap)]
     end
-    subgraph Gold Layer
+    subgraph Gold ["Gold Layer"]
         T3[(MongoDB: db-nosql)]
     end
 

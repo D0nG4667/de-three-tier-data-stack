@@ -10,17 +10,17 @@ The architecture follows a modular, decouplable topology running across isolated
 ```mermaid
 flowchart TD
     %% Ingestion Layer
-    subgraph Tier 1: Ingestion & Seeding [Container: db-raw-seeder]
+    subgraph T1_Seeding ["Tier 1: Ingestion & Seeding [Container: db-raw-seeder]"]
         CSV[Air_Quality_Continuous.csv] -->|Pandas Chunk Reader| SEED[Ingestion Engine: generator.py]
     end
 
     %% Relational Raw Layer
-    subgraph Tier 1: Relational Raw Database [Container: db-raw]
+    subgraph T1_DB ["Tier 1: Relational Raw Database [Container: db-raw]"]
         SEED -->|Seeds Raw Schema| RAW_DB[(PostgreSQL 18)]
     end
 
     %% Core ETL Layer
-    subgraph Tier 2: Core ETL Pipeline [Container: etl-pipeline]
+    subgraph T2_ETL ["Tier 2: Core ETL Pipeline [Container: etl-pipeline]"]
         RAW_DB -->|Keyset Cursor Pagination: 10k Chunks| ETL[ETL Service: pipeline.py]
         ETL -->|Data Quality Gates: validate.py| DQ{Validation & Hashing}
         DQ -->|Fails Range Bounds| LOG[Warning & Critical Alarm Log]
@@ -28,7 +28,7 @@ flowchart TD
     end
 
     %% Analytical Warehouse Layer
-    subgraph Tier 2: Analytical Serving Layer [Container: db-olap]
+    subgraph T2_OLAP ["Tier 2: Analytical Serving Layer [Container: db-olap]"]
         CROP -->|Bulk SQL Inserts| OLAP_DB[(PostgreSQL 18)]
         OLAP_DB -->|dbt compile & run| DBT[dbt transformations]
         DBT -->|Staging Views| STG_V[stg_constituencies, stg_readings, stg_stations]
@@ -38,7 +38,7 @@ flowchart TD
     end
 
     %% NoSQL Cache Layer
-    subgraph Tier 3: Document Replica Layer [Container: db-nosql]
+    subgraph T3_Nosql ["Tier 3: Document Replica Layer [Container: db-nosql]"]
         CROP -->|Direct SQL Metadata Join| NOSQL_MEM[Dynamic Postgres Lookup Map]
         NOSQL_MEM -->|Denormalized Nested BSON Docs| NOSQL_DB[(MongoDB 8.3.4)]
         NOSQL_DB -->|Sub-second Read Query| MONGO_Q[query_nosql.js]
@@ -306,7 +306,7 @@ docker logs -f etl-pipeline
 ### 5. Run Automated Tests
 To run the python test suite (pytest) inside the pipeline container:
 ```bash
-docker exec -it etl-pipeline pytest tests/
+docker compose run --rm pipeline pytest tests/
 ```
 
 ### 6. Admin Consoles

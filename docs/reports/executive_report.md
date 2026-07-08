@@ -9,9 +9,9 @@
 
 ```mermaid
 graph TD
-    S[SITUATION: Regulatory mandate to monitor and reduce air pollution under the UK Air Quality Strategy.]
-    C[COMPLICATION: Unstructured data ingestion, missing sensor readings, extreme outliers, database bottlenecking, and high cloud hosting costs.]
-    R[RESOLUTION: Hybrid Three-Tier Data Stack using PostgreSQL OLAP with dbt modeling and MongoDB for denormalized serving.]
+    S["SITUATION: Regulatory mandate to monitor and reduce air pollution under the UK Air Quality Strategy."]
+    C["COMPLICATION: Unstructured data ingestion, missing sensor readings, extreme outliers, database bottlenecking, and high cloud hosting costs."]
+    R["RESOLUTION: Hybrid Three-Tier Data Stack using PostgreSQL OLAP with dbt modeling and MongoDB for denormalized serving."]
     S --> C
     C --> R
 ```
@@ -115,10 +115,10 @@ While Polars is significantly faster due to its multi-threaded Rust execution en
 
 ```mermaid
 sequenceDiagram
-    participant RawDB as PostgreSQL (db-raw)
-    participant Pipeline as ETL Service (pipeline.py)
-    participant OLAP as PostgreSQL (db-olap)
-    participant NoSQL as MongoDB (db-nosql)
+    participant RawDB as "PostgreSQL (db-raw)"
+    participant Pipeline as "ETL Service (pipeline.py)"
+    participant OLAP as "PostgreSQL (db-olap)"
+    participant NoSQL as "MongoDB (db-nosql)"
 
     Pipeline->>RawDB: Fetch Batch (10,000 records) using Keyset Cursor
     Note over Pipeline: Parse Date Strings & Apply Crop Dates

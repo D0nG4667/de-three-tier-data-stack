@@ -17,28 +17,28 @@ The three-tier architecture is organized to isolate data generation, paginated o
 
 ```mermaid
 graph TD
-    subgraph Tier 1: Ingestion & Seeding
-        UWE[UWE Bristol ZIP Dataset] -->|Downloads/Unzips| GEN[Ingestion Engine / generator.py]
+    subgraph T1_Ingest ["Tier 1: Ingestion & Seeding"]
+        CSV_SRC[Continuous ZIP Dataset] -->|Downloads/Unzips| GEN[Ingestion Engine / generator.py]
         SIM[High-Fidelity Simulator] -->|Simulates 12 Years Telemetry| GEN
     end
 
-    subgraph Tier 1: Relational Raw Database
+    subgraph T1_Raw_DB ["Tier 1: Relational Raw Database"]
         GEN -->|Seeds Raw Schema| RAW_DB[(db-raw: Postgres)]
     end
 
-    subgraph Tier 2: Dagster Orchestrator [definitions.py]
+    subgraph T2_Dagster ["Tier 2: Dagster Orchestrator [definitions.py]"]
         DAGSTER[Dagster Code Location]
         DAGSTER -->|Assets Graph| ASSETS[raw_readings, readings, stations, constituencies, dbt_warehouse, mongodb_sample]
     end
 
-    subgraph Tier 2: Core ETL Pipeline
+    subgraph T2_ETL ["Tier 2: Core ETL Pipeline"]
         RAW_DB -->|Paginated Fetch: 10,000 Chunks| ASSETS
         ASSETS -->|Data Quality Gates: validate.py| DQ{Validation & MD5 Hashing}
         DQ -->|Fails Physical Bounds| LOG[Critical Alert Logging]
         DQ -->|Passes Crop Timeline| CROP[Crop & Normalise: transform.py]
     end
 
-    subgraph Tier 2: Analytical Serving Layer
+    subgraph T2_OLAP ["Tier 2: Analytical Serving Layer"]
         CROP -->|Loads normalized tables| OLAP_DB[(db-olap: Postgres)]
         OLAP_DB -->|dbt compile & run| DBT[dbt transformations]
         DBT -->|Staging Views| STG_V[stg_constituencies, stg_readings, stg_stations]
@@ -47,7 +47,7 @@ graph TD
         STG_V -->|Analytical Marts| QUERY_C[Query C: 2010-19 Commute PM2.5]
     end
 
-    subgraph Tier 3: Document Replica Layer
+    subgraph T3_NoSQL ["Tier 3: Document Replica Layer"]
         CROP -->|Loads denormalized JSON docs| NOSQL_DB[(db-nosql: MongoDB)]
         NOSQL_DB -->|Indexed query| MONGO_Q[query_nosql.js]
     end

@@ -11,13 +11,13 @@ The system operates across isolated Docker containers on a private network (`bri
 ```mermaid
 flowchart TD
     %% Tier 1: Ingestion (Bronze)
-    subgraph Tier 1: Ingestion & Raw Landing [Bronze]
+    subgraph T1_Ingest ["Tier 1: Ingestion & Raw Landing [Bronze]"]
         CSV[Air_Quality_Continuous.csv] -->|Pandas Chunk Reader| GEN[Ingestion Engine: generator.py]
         GEN -->|Seeds Raw Schema| RAW_DB[(db-raw: PostgreSQL 18)]
     end
 
     %% Tier 2: Storage & Transformation (Silver)
-    subgraph Tier 2: Core ETL & Warehouse [Silver]
+    subgraph T2_ETL ["Tier 2: Core ETL & Warehouse [Silver]"]
         RAW_DB -->|Keyset Pagination: 10k Chunks| ETL[ETL Pipeline: pipeline.py]
         ETL -->|Data Quality Gates: validate.py| DQ{Validation & Hashing}
         DQ -->|Passes Crop Timeline| CROP[Crop & Normalise: transform.py]
@@ -29,7 +29,7 @@ flowchart TD
     end
 
     %% Tier 3: Replication & Serving (Gold)
-    subgraph Tier 3: Document Serving [Gold]
+    subgraph T3_Serving ["Tier 3: Document Serving [Gold]"]
         MART_F & MART_D -->|Nested BSON Denormalization| NOSQL_SYNC[MongoDB replicator]
         NOSQL_SYNC -->|Sub-second Read Cache| NOSQL_DB[(db-nosql: MongoDB 8.3)]
         NOSQL_DB -->|Dashboard Serving| MONGO_Q[query_nosql.js]
