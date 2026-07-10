@@ -1,5 +1,13 @@
 # Bristol Air Quality: Multi-Container Analytical Data Stack
 
+[![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![dbt](https://img.shields.io/badge/dbt-FF694B?style=for-the-badge&logo=dbt&logoColor=white)](https://www.getdbt.com/)
+[![Dagster](https://img.shields.io/badge/Dagster-252525?style=for-the-badge&logo=dagster&logoColor=white)](https://dagster.io/)
+[![uv](https://img.shields.io/badge/uv-DE5C46?style=for-the-badge&logo=rust&logoColor=white)](https://github.com/astral-sh/uv)
+
 A production-ready, three-tier data engineering stack designed to orchestrate the ingestion, validation, analytical modeling, and cache serving of high-frequency environmental sensor telemetry. 
 
 This repository serves as an enterprise-grade blueprint for processing both historical continuous air quality logs and live synthetic sensor streams. By decoupling ingestion, warehouse transformation, and serving layers, the architecture guarantees low-latency query performance, zero data-loss validation, and horizontal scalability.
@@ -147,7 +155,7 @@ The raw telemetry represents continuous hourly observations taken from monitorin
 
 - **Dataset Source**: Bristol City Council Air Quality Monitoring Open Data
 - **Dataset Provenance**: University of the West of England (UWE Bristol), UFCFLR-15-M Data Management Fundamentals (Academic Year 2022-23)
-- **Direct Dataset Download**: [air-quality-data-continuous.zip](https://fetstudy.uwe.ac.uk/~p-chatterjee/2022-23/dmf/assignment/air-quality-data-continuous.zip) (approx. 23.2 MB compressed, unzipping to a ~247 MB CSV file containing 1.5M+ observations).
+- **Direct Dataset Download**: [air-quality-data-continuous.zip](https://fetstudy.uwe.ac.uk/~p-chatterjee/2022-23/dmf/assignment/air-quality-data-continuous.zip) (approx. 18.8 MB compressed, unzipping to a ~247 MB CSV file containing 1.5M+ observations).
 
 ### Data Definition Schema (23 Columns)
 
