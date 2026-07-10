@@ -1,7 +1,28 @@
 # Bristol Air Quality: Multi-Container Analytical Data Stack
-A production-ready, three-tier data engineering stack orchestrating synthetic sensor generation, validation gates, ETL extraction, dbt warehouse modeling, and NoSQL serving collections.
+
+A production-ready, three-tier data engineering stack designed to orchestrate the ingestion, validation, analytical modeling, and cache serving of high-frequency environmental sensor telemetry. 
+
+This repository serves as an enterprise-grade blueprint for processing both historical continuous air quality logs and live synthetic sensor streams. By decoupling ingestion, warehouse transformation, and serving layers, the architecture guarantees low-latency query performance, zero data-loss validation, and horizontal scalability.
 
 ---
+
+### 🌟 Core Capabilities & Dual Ingestion Pathways
+
+To replicate real-world data platform requirements, the stack is built around a **Dual-Mode Ingestion Engine**:
+
+1. **Historical Production Mode**: 
+   Loads and parses historical continuous air quality records from the **Official UWE Bristol Air Quality Project**. This pathway processes massive CSV datasets containing decade-long sensor intervals, resolving station locations, constituency boundaries, and chemical metrics.
+2. **Synthetic Simulation Mode**: 
+   Uses an integrated high-frequency generator (`generator.py`) to simulate real-time sensor streams and time-series telemetry. This simulates sensor anomalies, late-arriving events, and out-of-bounds readings, providing a sandbox to test downstream data-quality gates and pipeline watermarks without external network dependencies.
+
+### 🏛️ Three-Tier Data Topology
+
+* **Tier 1 (Raw/Extract)**: A PostgreSQL raw database acting as a high-throughput landing zone, preserving raw unstructured schemas.
+* **Tier 2 (OLAP/Warehouse)**: A PostgreSQL analytical database configured with a dbt compilation layer to transform raw logs into staging views, star-schema marts, and pre-computed analytical views.
+* **Tier 3 (NoSQL Cache)**: A document replica store (MongoDB) that stores pre-aggregated BSON representations of air quality matrices, serving sub-second dashboard queries.
+
+---
+
 
 ## 1. System Architecture & Data Flow
 
