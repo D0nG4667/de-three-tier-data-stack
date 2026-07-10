@@ -1,11 +1,27 @@
-FROM python:3.11-slim-bookworm
+# ==============================================================================
+# Stage 1: Shared Base Environment
+# ==============================================================================
+FROM python:3.11-slim-bookworm AS base
+
+# Prevent python from writing pyc files and buffering stdout/stderr
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH=/app \
+    DBT_SEND_ANONYMOUS_USAGE_STATS=false \
+    DBT_CHECK_VERSION=false
+
+WORKDIR /app
+
+# ==============================================================================
+# Stage 2: Builder (Dependency Compilation)
+# ==============================================================================
+FROM base AS builder
 
 # Copy uv binary from official image
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-WORKDIR /app
-
-# Install system dependencies
+# Install system compilation packages
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
@@ -15,22 +31,49 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy dependency specifications
 COPY pyproject.toml uv.lock ./
 
-# Build-time argument to dynamically specify package groups to synchronize (default is pipeline and dev)
-ARG UV_GROUPS="--group pipeline --group dev"
-
-# Synchronize dependencies using caching mounts for faster builds
+# Synchronize virtualenv with pipeline and orch groups (excluding dev)
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-install-project $UV_GROUPS
+    uv sync --frozen --no-install-project --group pipeline --group orch
 
-# Put virtual environment on the PATH
-ENV PATH="/app/.venv/bin:$PATH" \
-    PYTHONPATH=/app
+# ==============================================================================
+# Stage 3: Production Runtime (Slim & Secure)
+# ==============================================================================
+FROM base AS production
 
-# Copy application source files
+# Copy pre-compiled virtualenv from builder stage
+COPY --from=builder /app/.venv /app/.venv
+
+# Copy application source code
+COPY src/ /app/src/
+COPY config/ /app/config/
+COPY dbt_project/ /app/dbt_project/
+COPY dagster_orch/ /app/dagster_orch/
+
+# Generate the dbt manifest.json offline during the build phase
+RUN dbt parse --project-dir dbt_project --profiles-dir dbt_project
+
+# Default command to run the pipeline
+CMD ["python", "src/pipeline.py"]
+
+# ==============================================================================
+# Stage 4: Development Runtime (Includes dev dependencies & tests)
+# ==============================================================================
+FROM builder AS development
+
+# Synchronize virtualenv with all groups including dev (pytest)
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-install-project --group pipeline --group orch --group dev
+
+# Copy all source files including tests
 COPY src/ /app/src/
 COPY config/ /app/config/
 COPY tests/ /app/tests/
 COPY dbt_project/ /app/dbt_project/
+COPY dagster_orch/ /app/dagster_orch/
 
-# Default command is running the pipeline
-CMD ["python", "src/pipeline.py"]
+# Generate the dbt manifest.json offline during the build phase
+RUN dbt parse --project-dir dbt_project --profiles-dir dbt_project
+
+CMD ["pytest"]
+
+

@@ -1,3 +1,5 @@
+name: bristol-air-quality
+
 services:
   db-raw:
     image: postgres:18-alpine
@@ -8,7 +10,7 @@ services:
       POSTGRES_USER: ${RAW_DB_USER}
       POSTGRES_PASSWORD: ${RAW_DB_PASSWORD}
     volumes:
-      - raw_db_data:/var/lib/postgresql
+      - raw_db_data:/var/lib/postgresql/data
     networks:
       - bristol-air-net
     healthcheck:
@@ -31,7 +33,7 @@ services:
       POSTGRES_USER: ${OLAP_DB_USER}
       POSTGRES_PASSWORD: ${OLAP_DB_PASSWORD}
     volumes:
-      - olap_db_data:/var/lib/postgresql
+      - olap_db_data:/var/lib/postgresql/data
     networks:
       - bristol-air-net
     healthcheck:
@@ -142,6 +144,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.pipeline
+      target: production
     container_name: etl-pipeline
     restart: unless-stopped
     profiles:
@@ -185,8 +188,7 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile.pipeline
-      args:
-        - UV_GROUPS=--group pipeline --group dev --group orch
+      target: development
     container_name: dagster-webserver
     restart: unless-stopped
     environment:
@@ -228,6 +230,26 @@ services:
         limits:
           cpus: '1.5'
           memory: 2G
+
+  dagster-agent:
+    image: dagster/dagster-cloud-agent:latest
+    container_name: dagster-cloud-agent
+    restart: unless-stopped
+    profiles:
+      - agent
+    environment:
+      DAGSTER_CLOUD_API_TOKEN: ${DAGSTER_CLOUD_API_TOKEN}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config/dagster_agent.yaml:/opt/dagster/app/dagster.yaml:ro
+    networks:
+      - bristol-air-net
+    command: ["dagster-cloud", "agent", "run", "/opt/dagster/app"]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
 volumes:
   raw_db_data:

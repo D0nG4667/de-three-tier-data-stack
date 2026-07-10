@@ -19,7 +19,8 @@ pipeline = [
 orch = [
     "dagster==1.13.12",
     "dagster-webserver==1.13.12",
-    "dagster-dbt==0.29.12"
+    "dagster-dbt==0.29.12",
+    "dagster-cloud==1.13.12"
 ]
 dev = [
     "pytest==8.0.0"

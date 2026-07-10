@@ -83,10 +83,11 @@ docker compose run --rm pipeline python -m src.pipeline
 ## 4. Testing & Validation
 
 ### Run Automated Tests
-To run unit and validation tests using `pytest` inside the pipeline environment, execute:
+To run unit and validation tests using `pytest` inside the development-targeted environment, execute:
 ```bash
-docker compose run --rm pipeline pytest tests/
+docker compose run --rm dagster pytest tests/
 ```
+*(Note: We run tests inside the `dagster` service container because it is configured with the `development` build stage, which bundles testing libraries like `pytest` and mounts the `/app/tests/` directory. The `pipeline` container targets `production` and does not include these dev packages).*
 
 ### Validate Dagster Orchestration Definitions
 To verify that your Dagster pipeline graphs, dependencies, and translators are syntactically and logically correct:
@@ -169,3 +170,34 @@ Once the containers are up, you can access these local management dashboards:
 | **Dagster Orchestrator** | [http://localhost:3000](http://localhost:3000) | *No authentication needed* |
 | **pgAdmin 4** (Postgres DBs) | [http://localhost:5050](http://localhost:5050) | Email: `admin@admin.com`<br>Password: `admin_password` |
 | **Mongo Express** (MongoDB) | [http://localhost:8081](http://localhost:8081) | Username: `root`<br>Password: `mongo_root_password` |
+
+---
+
+## 6. Multi-Stage Docker Architecture
+
+We utilize an enterprise-grade, **Multi-Stage Build Pattern** in [Dockerfile.pipeline](../../docker/Dockerfile.pipeline) to split our dependencies and build targets.
+
+```mermaid
+graph TD
+    Stage1["Stage 1: base<br>(Slim python base + settings)"]
+    Stage2["Stage 2: builder<br>(gcc, libpq-dev, git + uv sync)"]
+    Stage3["Stage 3: production<br>(Slim runtime, no dev/test libraries)"]
+    Stage4["Stage 4: development<br>(Includes dev deps, tests/, pytest run)"]
+
+    Stage1 ──► Stage2
+    Stage2 ──► Stage3
+    Stage2 ──► Stage4
+
+    style Stage3 fill:#d4edda,stroke:#28a745,stroke-width:2px;
+    style Stage4 fill:#fff3cd,stroke:#ffc107,stroke-width:2px;
+```
+
+
+### Engineering Rationale & Benefits
+1. **Zero Dev/Test Footprint in Prod**: 
+   The `production` stage does not bundle testing binaries or files. This significantly reduces image size, increases startup speed in the cloud, and minimizes security vulnerabilities (by avoiding shipping testing packages like `pytest` or compiler tools to Dagster Cloud).
+2. **Build Caching Performance**:
+   Dependencies are resolved in `Stage 2` using only `pyproject.toml` and `uv.lock`. If you modify application source files in `src/` or `dagster_orch/`, Stage 2 remains cached, and Docker only rebuilds the final lightweight runtime layer in **under 10 seconds**.
+3. **dbt Offline Manifest Parsing**:
+   Because compiled dbt target folders are excluded from source control (via `.dockerignore`), the build file executes `RUN dbt parse` during the container image construction phase. This compiles and writes `manifest.json` directly into the image layer, preventing any runtime `DagsterDbtManifestNotFoundError` when code locations are initialized on Dagster Plus.
+

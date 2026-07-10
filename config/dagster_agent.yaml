@@ -1,0 +1,20 @@
+# ==============================================================================
+# Dagster Cloud Hybrid Agent Configuration
+# ==============================================================================
+# Tells the Dagster instance to boot as a Cloud Agent and run jobs inside Docker.
+
+instance_class:
+  module: dagster_cloud.instance
+  class: DagsterCloudAgentInstance
+
+dagster_cloud_api:
+  agent_token:
+    env: DAGSTER_CLOUD_API_TOKEN
+  deployment: prod
+
+user_code_launcher:
+  module: dagster_cloud.workspace.docker
+  class: DockerUserCodeLauncher
+  config:
+      networks:
+        - bristol-air-net

@@ -109,7 +109,7 @@ de-three-tier-data-stack/
 │   └── test_pipeline.py     # ETL and validation pytest test suite
 ├── pyproject.toml           # PEP 735 modern python package groups configuration
 ├── uv.lock                  # Lockfile pinned by Astral uv toolchain
-└── docker-compose.yml       # Production-ready, versionless container composition
+└── compose.yml              # Production-ready containers configuration
 ```
 
 ---
@@ -259,6 +259,17 @@ To launch all services, run the following command in the root project folder:
 docker compose up -d --build
 ```
 This compiles the container images and starts the persistent database engines (PostgreSQL, MongoDB), the dashboard/admin portals (pgAdmin, Mongo Express), and the Dagster orchestration webserver.
+
+### Docker Compose Profiles
+To keep the footprint of the active stack low, containers are divided into **Docker Compose Profiles**. Running the standard `docker compose up` will only start the persistent databases and core UI. 
+
+Use the following profiles to run specific workflows:
+
+| Profile | Services | Description | Command to Activate |
+|---|---|---|---|
+| **Default** (No profile) | `db-raw`, `db-olap`, `db-nosql`, `pgadmin`, `mongo-express`, `dagster` | Starts all persistent databases, administration web UIs, and the local Dagster webserver. | `docker compose up -d` |
+| **`manual`** | `generator`, `pipeline` | For running one-off data generator seeds, running pytest suites, or executing raw SQL migrations. | `docker compose --profile manual run --rm <service>` |
+| **`agent`** | `dagster-agent` | Runs the local hybrid agent that connects this local stack to your **Dagster Cloud** dashboard. | `docker compose --profile agent up -d` |
 
 > [!NOTE]
 > The data generator and ETL pipeline are mapped to the `manual` Compose profile. They will not execute automatically on startup. You must trigger them manually using the instructions below.
