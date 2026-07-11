@@ -41,9 +41,9 @@ def main():
 
     # Fetch a sample of readings from OLAP
     columns = [
-        "date_time", "site_id", "nox", "no2", "no", "pm10", "o3", "temp",
+        "date_time", "site_id", "nox", "no2", "no", "pm10", "o3", "temperature",
         "nvpm10", "vpm10", "nvpm2_5", "pm2_5", "vpm2_5",
-        "co", "rh", "pressure", "so2", "row_checksum"
+        "co", "rh", "air_pressure", "so2", "row_checksum"
     ]
     col_str = ", ".join(columns)
     

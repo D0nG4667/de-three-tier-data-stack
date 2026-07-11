@@ -21,7 +21,7 @@ select
     no,
     pm10,
     o3,
-    temp as temperature_c,
+    temperature as temperature_c,
     nvpm10,
     vpm10,
     nvpm2_5,
@@ -29,7 +29,7 @@ select
     vpm2_5,
     co,
     rh as relative_humidity,
-    pressure as air_pressure,
+    air_pressure,
     so2,
     row_checksum
 from deduplicated

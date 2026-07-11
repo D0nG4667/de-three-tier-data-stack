@@ -12,7 +12,7 @@ The system operates across isolated Docker containers on a private network (`bri
 flowchart TD
     %% Tier 1: Ingestion (Bronze)
     subgraph T1_Ingest ["Tier 1: Ingestion & Raw Landing [Bronze]"]
-        CSV[Air_Quality_Continuous.csv] -->|Pandas Chunk Reader| GEN[Ingestion Engine: generator.py]
+        CSV[air_quality_data_continuous.csv] -->|dlt (Postgres COPY)| GEN[Ingestion Engine: generator.py]
         GEN -->|Seeds Raw Schema| RAW_DB[(db-raw: PostgreSQL 18)]
     end
 

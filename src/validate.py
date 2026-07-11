@@ -58,10 +58,10 @@ def validate_row_schema(row: Dict[str, Any], config: Dict[str, Any]) -> Tuple[bo
             errors.append(f"Extreme NOx value exceeding maximum: {nox}")
             
     # Validate Temperature
-    temp = row.get("temp")
-    if temp is not None:
-        if temp < val_config.get("acceptable_temp_min", -20.0) or temp > val_config.get("acceptable_temp_max", 45.0):
-            errors.append(f"Temperature out of bounds: {temp}°C")
+    temperature = row.get("temperature")
+    if temperature is not None:
+        if temperature < val_config.get("acceptable_temp_min", -20.0) or temperature > val_config.get("acceptable_temp_max", 45.0):
+            errors.append(f"Temperature out of bounds: {temperature}°C")
             
     # Validate Humidity (RH)
     rh = row.get("rh")
@@ -70,7 +70,7 @@ def validate_row_schema(row: Dict[str, Any], config: Dict[str, Any]) -> Tuple[bo
             errors.append(f"Relative humidity out of bounds: {rh}%")
             
     # 3. Check for specific numeric data type conformance
-    for col in ["nox", "no2", "no", "pm10", "o3", "temp", "nvpm10", "vpm10", "nvpm2_5", "pm2_5", "vpm2_5", "co", "rh", "pressure", "so2"]:
+    for col in ["nox", "no2", "no", "pm10", "o3", "temperature", "nvpm10", "vpm10", "nvpm2_5", "pm2_5", "vpm2_5", "co", "rh", "air_pressure", "so2"]:
         val = row.get(col)
         if val is not None:
             try:

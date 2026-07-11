@@ -10,7 +10,7 @@ services:
       POSTGRES_USER: ${RAW_DB_USER}
       POSTGRES_PASSWORD: ${RAW_DB_PASSWORD}
     volumes:
-      - raw_db_data:/var/lib/postgresql/data
+      - raw_db_data:/var/lib/postgresql
     networks:
       - bristol-air-net
     healthcheck:
@@ -33,7 +33,7 @@ services:
       POSTGRES_USER: ${OLAP_DB_USER}
       POSTGRES_PASSWORD: ${OLAP_DB_PASSWORD}
     volumes:
-      - olap_db_data:/var/lib/postgresql/data
+      - olap_db_data:/var/lib/postgresql
     networks:
       - bristol-air-net
     healthcheck:

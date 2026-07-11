@@ -51,7 +51,7 @@ def setup_olap_schema(conn: Any) -> None:
                 no REAL,
                 pm10 REAL,
                 o3 REAL,
-                temp REAL,
+                temperature REAL,
                 nvpm10 REAL,
                 vpm10 REAL,
                 nvpm2_5 REAL,
@@ -59,7 +59,7 @@ def setup_olap_schema(conn: Any) -> None:
                 vpm2_5 REAL,
                 co REAL,
                 rh REAL,
-                pressure REAL,
+                air_pressure REAL,
                 so2 REAL,
                 row_checksum VARCHAR(32) NOT NULL
             );
@@ -134,9 +134,9 @@ def load_clean_batch_to_olap(conn: Any, batch: List[Dict[str, Any]]) -> None:
         
     insert_query = """
         INSERT INTO readings (
-            date_time, site_id, nox, no2, no, pm10, o3, temp,
+            date_time, site_id, nox, no2, no, pm10, o3, temperature,
             nvpm10, vpm10, nvpm2_5, pm2_5, vpm2_5,
-            co, rh, pressure, so2, row_checksum
+            co, rh, air_pressure, so2, row_checksum
         ) VALUES (
             %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
         );
@@ -146,9 +146,9 @@ def load_clean_batch_to_olap(conn: Any, batch: List[Dict[str, Any]]) -> None:
     for row in batch:
         records.append((
             row["date_time"], row["site_id"], row["nox"], row["no2"], row["no"],
-            row["pm10"], row["o3"], row["temp"],
+            row["pm10"], row["o3"], row["temperature"],
             row["nvpm10"], row["vpm10"], row["nvpm2_5"], row["pm2_5"], row["vpm2_5"],
-            row["co"], row["rh"], row["pressure"], row["so2"], row["row_checksum"]
+            row["co"], row["rh"], row["air_pressure"], row["so2"], row["row_checksum"]
         ))
         
     with conn.cursor() as cur:
@@ -232,9 +232,9 @@ def load_sample_to_mongodb(
                     "so2": float(row["so2"]) if row.get("so2") is not None else None
                 },
                 "weather": {
-                    "temp": float(row["temp"]) if row.get("temp") is not None else None,
+                    "temperature": float(row["temperature"]) if row.get("temperature") is not None else None,
                     "rh": float(row["rh"]) if row.get("rh") is not None else None,
-                    "pressure": float(row["pressure"]) if row.get("pressure") is not None else None
+                    "air_pressure": float(row["air_pressure"]) if row.get("air_pressure") is not None else None
                 },
                 "row_checksum": row.get("row_checksum")
             }

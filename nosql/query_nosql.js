@@ -17,6 +17,6 @@ db.readings_sample.find(
         "date_time": 1,
         "station.name": 1,
         "pollutants.no2": 1,
-        "weather.temp": 1
+        "weather.temperature": 1
     }
 ).sort({ "date_time": 1 }).limit(5).pretty();

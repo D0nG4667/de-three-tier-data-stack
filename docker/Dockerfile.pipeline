@@ -48,6 +48,7 @@ COPY src/ /app/src/
 COPY config/ /app/config/
 COPY dbt_project/ /app/dbt_project/
 COPY dagster_orch/ /app/dagster_orch/
+COPY nosql/ /app/nosql/
 
 # Generate the dbt manifest.json offline during the build phase
 RUN dbt parse --project-dir dbt_project --profiles-dir dbt_project
@@ -70,6 +71,7 @@ COPY config/ /app/config/
 COPY tests/ /app/tests/
 COPY dbt_project/ /app/dbt_project/
 COPY dagster_orch/ /app/dagster_orch/
+COPY nosql/ /app/nosql/
 
 # Generate the dbt manifest.json offline during the build phase
 RUN dbt parse --project-dir dbt_project --profiles-dir dbt_project

@@ -21,7 +21,7 @@ nosql_db:
 
 ingestion:
   mode: "csv"  # Set to "csv" to mount/ingest the real UWE dataset, or "simulate" for high-fidelity simulation
-  csv_path: "/app/data/air-quality-data-continuous.csv"
+  csv_path: "/app/data/air_quality_data_continuous.csv"
   download_url: "https://fetstudy.uwe.ac.uk/~p-chatterjee/2022-23/dmf/assignment/air-quality-data-continuous.zip"
   download_on_missing: true
 

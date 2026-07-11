@@ -21,9 +21,9 @@ def mock_config():
     }
 
 def test_compute_row_checksum():
-    row1 = {"site_id": 188, "val": 10.5, "temp": 12.0}
-    row2 = {"val": 10.5, "temp": 12.0, "site_id": 188}  # Reordered keys
-    row3 = {"site_id": 188, "val": 10.5, "temp": 13.0}  # Different value
+    row1 = {"site_id": 188, "val": 10.5, "temperature": 12.0}
+    row2 = {"val": 10.5, "temperature": 12.0, "site_id": 188}  # Reordered keys
+    row3 = {"site_id": 188, "val": 10.5, "temperature": 13.0}  # Different value
     
     hash1 = compute_row_checksum(row1)
     hash2 = compute_row_checksum(row2)
@@ -41,7 +41,7 @@ def test_validate_row_schema_valid(mock_config):
         "date_time": datetime(2019, 10, 1, 8, 0, 0),
         "site_id": 188,
         "nox": 120.0,
-        "temp": 15.0,
+        "temperature": 15.0,
         "rh": 50.0
     }
     is_valid, errors = validate_row_schema(valid_row, mock_config)
@@ -53,7 +53,7 @@ def test_validate_row_schema_invalid_nox(mock_config):
         "date_time": datetime(2019, 10, 1, 8, 0, 0),
         "site_id": 188,
         "nox": -5.0,  # Negative NOx
-        "temp": 15.0,
+        "temperature": 15.0,
         "rh": 50.0
     }
     is_valid, errors = validate_row_schema(invalid_row, mock_config)
@@ -65,7 +65,7 @@ def test_validate_row_schema_invalid_temp(mock_config):
         "date_time": datetime(2019, 10, 1, 8, 0, 0),
         "site_id": 188,
         "nox": 120.0,
-        "temp": 55.0,  # Temp out of bounds (>45)
+        "temperature": 55.0,  # Temp out of bounds (>45)
         "rh": 50.0
     }
     is_valid, errors = validate_row_schema(invalid_row, mock_config)
@@ -75,13 +75,13 @@ def test_validate_row_schema_invalid_temp(mock_config):
 def test_transform_batch_cropping(mock_config):
     batch = [
         # In range
-        {"date_time": datetime(2018, 5, 1, 12, 0, 0), "site_id": 188, "nox": 50.0, "temp": 15.0},
+        {"date_time": datetime(2018, 5, 1, 12, 0, 0), "site_id": 188, "nox": 50.0, "temperature": 15.0},
         # Out of range (too early)
-        {"date_time": datetime(2009, 12, 31, 23, 0, 0), "site_id": 188, "nox": 50.0, "temp": 15.0},
+        {"date_time": datetime(2009, 12, 31, 23, 0, 0), "site_id": 188, "nox": 50.0, "temperature": 15.0},
         # Out of range (too late)
-        {"date_time": datetime(2022, 10, 6, 0, 0, 0), "site_id": 188, "nox": 50.0, "temp": 15.0},
+        {"date_time": datetime(2022, 10, 6, 0, 0, 0), "site_id": 188, "nox": 50.0, "temperature": 15.0},
         # In range but invalid value (should be filtered out)
-        {"date_time": datetime(2018, 5, 2, 12, 0, 0), "site_id": 188, "nox": -99.0, "temp": 15.0}
+        {"date_time": datetime(2018, 5, 2, 12, 0, 0), "site_id": 188, "nox": -99.0, "temperature": 15.0}
     ]
     
     cleaned = transform_batch(batch, mock_config)

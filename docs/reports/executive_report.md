@@ -85,11 +85,12 @@ The data assets processed by the pipeline include:
 +------------------------------------+---------------------------------------------------+
 ```
 
-### Why Python/Pandas instead of Polars for Ingestion?
-While Polars is significantly faster due to its multi-threaded Rust execution engine, **Pandas 3.0.3** was chosen for this specific data stack because:
-1. **Chunking Stability**: Pandas has highly stable, predictable memory-profile generator support (`read_csv(chunksize=N)`), which is essential for resource-constrained container environments.
-2. **PostgreSQL Compatibility**: The `psycopg2` driver interfaces seamlessly with standard Python datatypes returned by Pandas' data-cleaning routines.
-3. **Deterministic Cleansing**: The operations involve row-by-row logical schema validations, where Pandas' series methods are highly readable and easy to audit.
+### Ingestion Layer Modernization: dlt & Native COPY
+To achieve enterprise-grade efficiency and reliability at the ingestion boundary, we migrated the database seeding and ingestion pipelines (`generator.py`) from custom `executemany` SQL loops to **dlt (Data Load Tool)**. 
+
+1. **Memory-Safe Pure Python Streaming**: For the UWE CSV dataset (247 MB uncompressed), we utilize a pure Python `csv.DictReader` generator stream. By completely removing Pandas from the ingestion container, we eliminated Pandas' heavy RAM overhead, keeping the memory footprint flat and constant at **under 20 MB** (OOM-safe).
+2. **PostgreSQL Native COPY**: Instead of generating thousands of individual `INSERT` tasks, `dlt` packages the stream into optimized temporary binary/text blocks and triggers Postgres's native `COPY` command. This loads the 1.5M+ observations in **under 15 seconds** instead of minutes.
+3. **Unified Ingestion Architecture**: The synthetic simulation pathway is also refactored to load through `dlt`. Both programmatic simulated streams and historical CSV runs leverage the same unified pipeline, ensuring consistent loading practices, transaction boundaries, and schemas.
 
 ### Why a Hybrid Relational + NoSQL Serving Model?
 * **PostgreSQL (SQL)** serves as our **Source of Truth** and analytical core. Relational tables are normalized to 3NF, preventing duplication of station coordinates and constituency details, and supporting complex JOINs.

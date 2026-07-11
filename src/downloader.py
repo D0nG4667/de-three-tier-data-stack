@@ -1,16 +1,16 @@
-import os
 import zipfile
 import logging
 import urllib.request
+from pathlib import Path
 
 logger = logging.getLogger("pipeline")
 
 def download_and_extract_dataset(
     url: str,
-    dest_dir: str,
+    dest_dir: Path,
     zip_name: str = "air_quality.zip",
-    csv_name: str = "Air_Quality_Continuous.csv"
-) -> str:
+    csv_name: str = "air_quality_data_continuous.csv"
+) -> Path:
     """
     Downloads the official UWE Bristol Air Quality dataset ZIP archive and extracts it.
     
@@ -20,22 +20,23 @@ def download_and_extract_dataset(
     
     Parameters:
         url (str): Remote HTTP/HTTPS URL from which the ZIP archive is retrieved.
-        dest_dir (str): Local filesystem path where files are extracted.
+        dest_dir (Path): Local filesystem path where files are extracted.
         zip_name (str): Temporary local name for the downloaded ZIP file.
         csv_name (str): Expected canonical name of the extracted CSV file.
         
     Returns:
-        str: Absolute filesystem path to the extracted CSV file.
+        Path: Absolute filesystem path to the extracted CSV file.
         
     Raises:
         FileNotFoundError: If the ZIP archive is successfully extracted but contains no CSV files.
         URLError / HTTPError: If connection issues occur during HTTP download.
     """
-    os.makedirs(dest_dir, exist_ok=True)
-    zip_path = os.path.join(dest_dir, zip_name)
-    csv_path = os.path.join(dest_dir, csv_name)
+    dest_dir = Path(dest_dir)
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    zip_path = dest_dir / zip_name
+    csv_path = dest_dir / csv_name
     
-    if os.path.exists(csv_path):
+    if csv_path.exists():
         logger.info(f"Dataset already exists at {csv_path}. Skipping download.")
         return csv_path
         
@@ -57,20 +58,18 @@ def download_and_extract_dataset(
             zip_ref.extractall(dest_dir)
             
         # Clean up zip
-        if os.path.exists(zip_path):
-            os.remove(zip_path)
+        if zip_path.exists():
+            zip_path.unlink()
             
         # Check if file name matches expected or rename if necessary
-        # The file inside the zip might be named differently (e.g. lowercase or slightly different spelling)
-        extracted_files = os.listdir(dest_dir)
-        logger.info(f"Extracted files: {extracted_files}")
+        extracted_files = [f for f in dest_dir.iterdir() if f.is_file()]
+        logger.info(f"Extracted files: {[f.name for f in extracted_files]}")
         
         for file in extracted_files:
-            if file.lower().endswith('.csv'):
-                actual_path = os.path.join(dest_dir, file)
-                if file != csv_name:
-                    os.rename(actual_path, csv_path)
-                    logger.info(f"Renamed {file} to {csv_name}")
+            if file.suffix.lower() == '.csv':
+                if file.name != csv_name:
+                    file.rename(csv_path)
+                    logger.info(f"Renamed {file.name} to {csv_name}")
                 return csv_path
                 
         raise FileNotFoundError("No CSV file found in the extracted archive.")

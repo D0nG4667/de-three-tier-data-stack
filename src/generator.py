@@ -1,17 +1,20 @@
 import os
 import sys
+import csv
+import dlt
 import yaml
 import math
 import random
 import psycopg2
-import pandas as pd
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
 from datetime import datetime, timedelta
 from src.downloader import download_and_extract_dataset
 
 # Load configuration
-CONFIG_PATH = os.getenv("CONFIG_PATH", "/app/config/config.yaml")
+CONFIG_PATH = Path(os.getenv("CONFIG_PATH", "/app/config/config.yaml"))
 
-def load_config():
+def load_config() -> Dict[str, Any]:
     with open(CONFIG_PATH, "r") as f:
         return yaml.safe_load(f)
 
@@ -45,7 +48,7 @@ STATIONS = [
     {"site_id": 672, "name": "Marlborough Street", "lat": 51.4591419717, "lon": -2.59543271836, "const_id": 4, "date_start": "2021-07-01 00:00:00", "date_end": None, "is_current": True, "instrument_type": "Continuous (Reference)"}
 ]
 
-def get_connection():
+def get_connection() -> psycopg2.extensions.connection:
     return psycopg2.connect(
         host=os.getenv("RAW_DB_HOST", "db-raw"),
         port=os.getenv("RAW_DB_PORT", "5432"),
@@ -54,7 +57,15 @@ def get_connection():
         database=os.getenv("RAW_DB_NAME", "bristol_raw")
     )
 
-def setup_schema(conn):
+def get_connection_string() -> str:
+    host = os.getenv("RAW_DB_HOST", "db-raw")
+    port = os.getenv("RAW_DB_PORT", "5432")
+    user = os.getenv("RAW_DB_USER", "postgres")
+    password = os.getenv("RAW_DB_PASSWORD", "postgres_raw_password")
+    database = os.getenv("RAW_DB_NAME", "bristol_raw")
+    return f"postgresql://{user}:{password}@{host}:{port}/{database}"
+
+def setup_schema(conn: psycopg2.extensions.connection) -> None:
     with conn.cursor() as cur:
         print("Setting up schemas in raw database...")
         cur.execute("""
@@ -89,7 +100,7 @@ def setup_schema(conn):
                 no REAL,
                 pm10 REAL,
                 o3 REAL,
-                temp REAL,
+                temperature REAL,
                 nvpm10 REAL,
                 vpm10 REAL,
                 nvpm2_5 REAL,
@@ -97,14 +108,16 @@ def setup_schema(conn):
                 vpm2_5 REAL,
                 co REAL,
                 rh REAL,
-                pressure REAL,
-                so2 REAL
+                air_pressure REAL,
+                so2 REAL,
+                _dlt_load_id VARCHAR(32),
+                _dlt_id VARCHAR(32)
             );
         """)
         conn.commit()
         print("Raw database tables created.")
 
-def seed_static_tables(conn):
+def seed_static_tables(conn: psycopg2.extensions.connection) -> None:
     with conn.cursor() as cur:
         print("Seeding static tables...")
         for const in CONSTITUENCIES:
@@ -128,7 +141,7 @@ def seed_static_tables(conn):
         conn.commit()
         print("Constituencies and Stations seeded.")
 
-def generate_sensor_readings(start_date, end_date):
+def generate_sensor_readings(start_date: datetime, end_date: datetime) -> List[Tuple[Any, ...]]:
     """
     Generates realistic sensor readings using traffic patterns, day/night cycles,
     seasonal profiles, and random faults.
@@ -209,14 +222,17 @@ def generate_sensor_readings(start_date, end_date):
         
     return batch_records
 
-def ingest_csv_dataset(conn, csv_path):
+def ingest_csv_dataset(
+    conn: psycopg2.extensions.connection,
+    connection_string: str,
+    csv_path: Path
+) -> None:
     """
-    Reads the original UWE Bristol CSV dataset in chunks and loads it into db-raw.
-    Handles semicolon/comma separator auto-detection and maps columns to DB attributes.
+    Reads the original UWE Bristol CSV dataset using a memory-safe pure Python DictReader stream
+    and loads it into db-raw via dlt using native PostgreSQL COPY.
     """
-    print(f"Ingesting raw CSV dataset from {csv_path}...")
+    print(f"Ingesting raw CSV dataset from {csv_path} using dlt...")
     
-    # 1. Detect separator by inspecting first line
     with open(csv_path, 'r', encoding='utf-8', errors='ignore') as f:
         first_line = f.readline()
     
@@ -232,7 +248,7 @@ def ingest_csv_dataset(conn, csv_path):
         'no': 'no',
         'pm10': 'pm10',
         'o3': 'o3',
-        'temperature': 'temp',
+        'temperature': 'temperature',
         'nvpm10': 'nvpm10',
         'vpm10': 'vpm10',
         'nvpm2.5': 'nvpm2_5',
@@ -240,65 +256,127 @@ def ingest_csv_dataset(conn, csv_path):
         'vpm2.5': 'vpm2_5',
         'co': 'co',
         'rh': 'rh',
-        'pressure': 'pressure',
+        'air pressure': 'air_pressure',
         'so2': 'so2'
     }
 
-    # Setup insert query
-    db_cols = list(col_mapping.values())
-    placeholders = ", ".join(["%s"] * len(db_cols))
-    insert_query = f"INSERT INTO raw_readings ({', '.join(db_cols)}) VALUES ({placeholders});"
+    db_cols = list(dict.fromkeys(col_mapping.values()))
+    valid_station_ids = {s["site_id"] for s in STATIONS}
 
-    # Use pandas to read in chunks of 50,000 for OOM safety
-    chunksize = 50000
-    total_records = 0
-    
+    # Truncate raw_readings to prevent duplicates on re-runs while keeping constraints
     with conn.cursor() as cur:
-        for chunk in pd.read_csv(csv_path, sep=separator, chunksize=chunksize, low_memory=False):
-            # Clean and normalize headers (lowercase, remove spaces)
-            chunk.columns = [c.strip().lower() for c in chunk.columns]
-            
-            # Keep only columns mapped to DB
-            available_cols = [c for c in chunk.columns if c in col_mapping]
-            chunk = chunk[available_cols]
-            
-            # Rename columns to match DB
-            chunk = chunk.rename(columns=col_mapping)
-            
-            # Ensure missing columns in CSV are added as Nulls
-            for col in db_cols:
-                if col not in chunk.columns:
-                    chunk[col] = None
-                    
-            # Reorder columns to match insert query order
-            chunk = chunk[db_cols]
-            
-            # Format datetime
-            chunk['date_time'] = pd.to_datetime(chunk['date_time'], errors='coerce')
-            
-            # Convert numeric columns, replacing NaN with None for DB import
-            for col in db_cols:
-                if col != 'date_time':
-                    chunk[col] = chunk[col].where(pd.notnull(chunk[col]), None)
-            
-            # Filter out rows with invalid/null date_times or site_ids, and restrict to the 19 modeled stations
-            valid_station_ids = [s["site_id"] for s in STATIONS]
-            chunk = chunk[chunk['date_time'].notnull()]
-            chunk = chunk[chunk['site_id'].notnull()]
-            chunk = chunk[chunk['site_id'].isin(valid_station_ids)]
-            
-            # Insert records
-            records = [tuple(x) for x in chunk.to_numpy()]
-            cur.executemany(insert_query, records)
-            conn.commit()
-            
-            total_records += len(records)
-            sys.stdout.write(f"\rImported {total_records} records from CSV...")
-            sys.stdout.flush()
-            
-    print(f"\nSuccessfully imported {total_records} records from CSV dataset into db-raw.")
+        cur.execute("TRUNCATE TABLE raw_readings;")
+        conn.commit()
 
-def main():
+    @dlt.resource(table_name="raw_readings", write_disposition="append")
+    def csv_data_resource():
+        with open(csv_path, 'r', encoding='utf-8', errors='ignore') as f:
+            reader = csv.DictReader(f, delimiter=separator)
+            for row in reader:
+                cleaned_row = {}
+                for k, v in row.items():
+                    if k is None:
+                        continue
+                    clean_k = k.strip().lower()
+                    if clean_k in col_mapping:
+                        db_col = col_mapping[clean_k]
+                        cleaned_row[db_col] = None if (v == "" or v is None or v == "NaN" or v == "null") else v
+                
+                # Check site_id
+                site_id_raw = cleaned_row.get("site_id")
+                if not site_id_raw:
+                    continue
+                try:
+                    site_id = int(float(site_id_raw))
+                    if site_id not in valid_station_ids:
+                        continue
+                    cleaned_row["site_id"] = site_id
+                except ValueError:
+                    continue
+
+                # Check date_time
+                dt_raw = cleaned_row.get("date_time")
+                if not dt_raw:
+                    continue
+                dt_obj = None
+                try:
+                    dt_obj = datetime.fromisoformat(dt_raw)
+                except ValueError:
+                    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y/%m/%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S%z"):
+                        try:
+                            dt_obj = datetime.strptime(dt_raw, fmt)
+                            break
+                        except ValueError:
+                            continue
+                if dt_obj is None:
+                    continue
+                cleaned_row["date_time"] = dt_obj
+
+                # Numeric casting
+                for col in db_cols:
+                    if col not in ("date_time", "site_id"):
+                        val = cleaned_row.get(col)
+                        if val is not None:
+                            try:
+                                cleaned_row[col] = float(val)
+                            except ValueError:
+                                cleaned_row[col] = None
+                        else:
+                            cleaned_row[col] = None
+
+                yield cleaned_row
+
+    pipeline = dlt.pipeline(
+        pipeline_name="uwe_bristol_csv_ingest_v2",
+        destination="postgres",
+        dataset_name="public"
+    )
+    
+    load_info = pipeline.run(
+        csv_data_resource(),
+        credentials=connection_string
+    )
+    print(load_info)
+    print("CSV dataset ingestion via dlt complete.")
+
+def load_simulated_readings(
+    conn: psycopg2.extensions.connection,
+    connection_string: str,
+    records: List[Tuple[Any, ...]]
+) -> None:
+    """
+    Loads simulated time-series readings into db-raw via dlt using native PostgreSQL COPY.
+    """
+    print(f"Loading {len(records)} simulated readings into db-raw using dlt...")
+    
+    # Truncate raw_readings to prevent duplicates on re-runs while keeping constraints
+    with conn.cursor() as cur:
+        cur.execute("TRUNCATE TABLE raw_readings;")
+        conn.commit()
+
+    @dlt.resource(table_name="raw_readings", write_disposition="append")
+    def simulated_data_resource():
+        keys = [
+            "date_time", "site_id", "nox", "no2", "no", "pm10", "o3", "temperature",
+            "nvpm10", "vpm10", "nvpm2_5", "pm2_5", "vpm2_5", "co", "rh", "air_pressure", "so2"
+        ]
+        for r in records:
+            yield dict(zip(keys, r))
+
+    pipeline = dlt.pipeline(
+        pipeline_name="uwe_bristol_sim_ingest_v2",
+        destination="postgres",
+        dataset_name="public"
+    )
+    
+    load_info = pipeline.run(
+        simulated_data_resource(),
+        credentials=connection_string
+    )
+    print(load_info)
+    print("Simulated readings loading via dlt complete.")
+
+def main() -> None:
     config = load_config()
     ingest_conf = config.get("ingestion", {})
     mode = ingest_conf.get("mode", "simulate")
@@ -306,23 +384,24 @@ def main():
     print(f"Starting Seeding Engine. Ingestion Mode: {mode.upper()}")
     
     conn = get_connection()
+    connection_string = get_connection_string()
     try:
         setup_schema(conn)
         seed_static_tables(conn)
 
         if mode == "csv":
-            csv_path = ingest_conf.get("csv_path", "/app/data/Air_Quality_Continuous.csv")
+            csv_path = Path(ingest_conf.get("csv_path", "/app/data/air_quality_data_continuous.csv"))
             
             # Download and extract if missing and allowed
-            if not os.path.exists(csv_path):
+            if not csv_path.exists():
                 if ingest_conf.get("download_on_missing", True):
                     download_url = ingest_conf.get("download_url")
-                    dest_dir = os.path.dirname(csv_path)
-                    csv_path = download_and_extract_dataset(download_url, dest_dir)
+                    dest_dir = csv_path.parent
+                    csv_path = download_and_extract_dataset(download_url, dest_dir, csv_name=csv_path.name)
                 else:
                     raise FileNotFoundError(f"Original dataset CSV not found at {csv_path} and download_on_missing is disabled.")
                     
-            ingest_csv_dataset(conn, csv_path)
+            ingest_csv_dataset(conn, connection_string, csv_path)
         else:
             # Simulation mode
             generate_full = os.getenv("GENERATE_FULL_DATASET", "false").lower() == "true"
@@ -346,26 +425,7 @@ def main():
                 slice_2019_end = datetime(2019, 10, 30, 23, 0, 0)
                 records += generate_sensor_readings(slice_2019_start, slice_2019_end)
 
-            print(f"Loading {len(records)} simulated readings into db-raw...")
-            
-            with conn.cursor() as cur:
-                insert_query = """
-                    INSERT INTO raw_readings (
-                        date_time, site_id, nox, no2, no, pm10, o3, temp,
-                        nvpm10, vpm10, nvpm2_5, pm2_5, vpm2_5,
-                        co, rh, pressure, so2
-                    ) VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
-                    );
-                """
-                chunk_size = 5000
-                for i in range(0, len(records), chunk_size):
-                    chunk = records[i:i+chunk_size]
-                    cur.executemany(insert_query, chunk)
-                    conn.commit()
-                    sys.stdout.write(f"\rSeeded {i + len(chunk)}/{len(records)} records...")
-                    sys.stdout.flush()
-                print("\nSeeding raw readings completed successfully!")
+            load_simulated_readings(conn, connection_string, records)
                 
     except Exception as e:
         print(f"\nError occurred during seeding: {e}")

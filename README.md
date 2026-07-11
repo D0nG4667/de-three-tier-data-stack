@@ -40,7 +40,7 @@ The architecture follows a modular, decouplable topology running across isolated
 flowchart TD
     %% Ingestion Layer
     subgraph T1_Seeding ["Tier 1: Ingestion & Seeding [Container: db-raw-seeder]"]
-        CSV[Air_Quality_Continuous.csv] -->|Pandas Chunk Reader| SEED[Ingestion Engine: generator.py]
+        CSV[air_quality_data_continuous.csv] -->|dlt (Postgres COPY)| SEED[Ingestion Engine: generator.py]
     end
 
     %% Relational Raw Layer
@@ -159,7 +159,7 @@ The raw telemetry represents continuous hourly observations taken from monitorin
 
 ### Data Definition Schema (23 Columns)
 
-The source dataset (`Air_Quality_Continuous.csv`) contains 23 columns. To comply with **Third Normal Form (3NF)** design patterns, these are normalized between the telemetry fact table (`readings`) and the station dimension table (`stations`):
+The source dataset (`air_quality_data_continuous.csv`) contains 23 columns. To comply with **Third Normal Form (3NF)** design patterns, these are normalized between the telemetry fact table (`readings`) and the station dimension table (`stations`):
 
 #### 1. Telemetry Fact Table (`readings`)
 
