@@ -20,8 +20,8 @@ jobs:
 
       - name: Back up and pre-process docs (LaTeX & Paths)
         # We perform temporary preprocessing on the runner so the repository remains clean:
-        # 1. Back up clean docs: preserves original relative paths (../assets/) and standard LaTeX.
-        # 2. Preprocess docs: confluence_sync_preprocessor.py translates $...$ inline math to high-res SVG image links
+        # 1. Back up clean docs: preserves original relative paths (../assets/) and standard LaTeX/Mermaid code.
+        # 2. Preprocess docs: confluence_sync_preprocessor.py translates $...$ math and ```mermaid blocks to high-res image links
         #    AND rewrites relative image paths (../assets/ -> docs/assets/) to resolve relative to workspace root.
         run: |
           cp -R docs docs_backup
