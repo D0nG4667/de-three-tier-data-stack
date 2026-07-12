@@ -31,6 +31,12 @@ To replicate real-world data platform requirements, the stack is built around a 
 
 ---
 
+### 📚 Stakeholder Resources & Project Wiki
+* **Business Glossary & System Blueprints**: [Confluence Space Wiki Overview](https://uwe-bristol-air.atlassian.net/wiki/spaces/uwebristol2026/overview?homepageId=262487)
+* **Interactive Data Catalog**: Compile and run `docker compose up dbt-docs` and navigate to local [dbt Docs Portal](http://localhost:8080) for schemas and lineage graphs.
+
+---
+
 
 ## 1. System Architecture & Data Flow
 

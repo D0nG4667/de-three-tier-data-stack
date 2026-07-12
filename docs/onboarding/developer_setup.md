@@ -221,7 +221,9 @@ To bridge code-driven engineering specs with business-facing wikis, we have esta
 
 * **Workflow Trigger**: Runs automatically on any push or merge events to the `main` branch affecting documentation files (`docs/**`), or manually via the `workflow_dispatch` button.
 * **Workflow Location**: [.github/workflows/confluence_sync.yml](../../.github/workflows/confluence_sync.yml)
-* **Under-the-hood Engine**: Uses the marketplace `7nohe/confluence-md@v1` Action.
+* **Confluence Space Wiki**: [UWE Bristol Air Quality Space Overview](https://uwe-bristol-air.atlassian.net/wiki/spaces/uwebristol2026/overview?homepageId=262487)
+* **Under-the-hood Engine**: Uses the marketplace `7nohe/confluence-md@v0.2.2` Action.
+* **Attachments Resolution**: Configured with `attachments_base: "."` to resolve local image links (e.g. `../assets/`) relative to the repository workspace root, avoiding security-related path traversal blocks on the runner.
 * **Frontmatter Mapping Requirement**: For directory-level synchronization, each markdown file in the `docs/` folder must specify its own target Confluence Page ID in its YAML frontmatter block:
   ```yaml
   ---
