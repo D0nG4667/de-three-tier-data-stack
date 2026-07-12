@@ -168,6 +168,7 @@ Once the containers are up, you can access these local management dashboards:
 | Service Portal | URL | Credentials |
 |---|---|---|
 | **Dagster Orchestrator** | [http://localhost:3000](http://localhost:3000) | *No authentication needed* |
+| **dbt Docs Portal** | [http://localhost:8080](http://localhost:8080) | *No authentication needed* |
 | **pgAdmin 4** (Postgres DBs) | [http://localhost:5050](http://localhost:5050) | Email: `admin@admin.com`<br>Password: `admin_password` |
 | **Mongo Express** (MongoDB) | [http://localhost:8081](http://localhost:8081) | Username: `root`<br>Password: `mongo_root_password` |
 
@@ -200,4 +201,30 @@ graph TD
    Dependencies are resolved in `Stage 2` using only `pyproject.toml` and `uv.lock`. If you modify application source files in `src/` or `dagster_orch/`, Stage 2 remains cached, and Docker only rebuilds the final lightweight runtime layer in **under 10 seconds**.
 3. **dbt Offline Manifest Parsing**:
    Because compiled dbt target folders are excluded from source control (via `.dockerignore`), the build file executes `RUN dbt parse` during the container image construction phase. This compiles and writes `manifest.json` directly into the image layer, preventing any runtime `DagsterDbtManifestNotFoundError` when code locations are initialized on Dagster Plus.
+
+---
+
+## 7. Documentation Portal & GitOps Confluence Sync
+
+### Local dbt Docs Serving
+To enable developers and analytics engineers to browse table schemas, descriptions, and structural lineage, the stack includes a live-updating `dbt-docs` container.
+
+* **URL**: [http://localhost:8080](http://localhost:8080)
+* **Start Service**:
+  ```bash
+  docker compose up -d dbt-docs
+  ```
+  *(This will generate the data catalog schema definitions, compile dependencies, and boot the web portal on port 8080)*.
+
+### GitOps Confluence Integration Sync
+To bridge code-driven engineering specs with business-facing wikis, we have established a **GitOps Documentation Sync Pipeline** using GitHub Actions:
+
+* **Workflow Trigger**: Runs automatically on any push or merge events to the `main` branch affecting documentation files (`docs/**`).
+* **Workflow Location**: [.github/workflows/confluence_sync.yml](../../.github/workflows/confluence_sync.yml)
+* **Confluence Target Space**: Link to space wiki [uwe-bristol-air.atlassian.net/wiki](https://uwe-bristol-air.atlassian.net/wiki)
+* **Required GitHub Secrets**:
+  - `CONFLUENCE_SPACE_KEY`: Key of the target Confluence space (e.g. `BRISTOLAIR`).
+  - `CONFLUENCE_EMAIL`: Account email for authentication.
+  - `CONFLUENCE_API_TOKEN`: Atlassian developer API token.
+  - `CONFLUENCE_PARENT_PAGE_ID`: ID of the parent page under which the wiki page directory tree is automatically mirrored.
 

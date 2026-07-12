@@ -251,6 +251,39 @@ services:
           cpus: '0.5'
           memory: 512M
 
+  dbt-docs:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.pipeline
+      target: production
+    container_name: dbt-docs
+    restart: unless-stopped
+    environment:
+      OLAP_DB_HOST: db-olap
+      OLAP_DB_PORT: 5432
+      OLAP_DB_USER: ${OLAP_DB_USER}
+      OLAP_DB_PASSWORD: ${OLAP_DB_PASSWORD}
+      OLAP_DB_NAME: ${OLAP_DB_NAME}
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      db-olap:
+        condition: service_healthy
+    volumes:
+      - ./config/config.yaml:/app/config/config.yaml:ro
+      - ./dbt_project:/app/dbt_project
+      - ./data:/app/data
+    networks:
+      - bristol-air-net
+    command: >
+      sh -c "dbt docs generate --project-dir dbt_project --profiles-dir dbt_project &&
+             dbt docs serve --port 8080 --host 0.0.0.0 --project-dir dbt_project --profiles-dir dbt_project"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
 volumes:
   raw_db_data:
     driver: local
