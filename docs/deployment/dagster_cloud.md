@@ -1,3 +1,7 @@
+---
+confluence_page_id: "98586"
+---
+
 # Deploying the Medallion Data Stack to Dagster Cloud
 
 This guide details the steps and configuration patterns required to deploy the Bristol Air Quality data stack to **Dagster Cloud**. 
