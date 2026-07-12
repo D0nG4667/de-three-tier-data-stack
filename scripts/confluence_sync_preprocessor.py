@@ -74,7 +74,7 @@ def replace_mermaid_blocks(text: str) -> str:
         base64_bytes = base64.urlsafe_b64encode(graph_bytes)
         base64_string = base64_bytes.decode("ascii").strip("=")
         
-        url = f"https://mermaid.ink/svg/{base64_string}?bgColor=white"
+        url = f"https://mermaid.ink/img/{base64_string}?bgColor=white"
         return f"\n\n![Mermaid Diagram]({url})\n\n"
 
     # Regex matching ```mermaid ... ```
