@@ -12,27 +12,27 @@ The system operates across isolated Docker containers on a private network (`bri
 flowchart TD
     %% Tier 1: Ingestion (Bronze)
     subgraph T1_Ingest ["Tier 1: Ingestion & Raw Landing [Bronze]"]
-        CSV[air_quality_data_continuous.csv] -->|dlt (Postgres COPY)| GEN[Ingestion Engine: generator.py]
-        GEN -->|Seeds Raw Schema| RAW_DB[(db-raw: PostgreSQL 18)]
+        CSV["air_quality_data_continuous.csv"] -->|"dlt (Postgres COPY)"| GEN["Ingestion Engine: generator.py"]
+        GEN -->|Seeds Raw Schema| RAW_DB[("db-raw: PostgreSQL 18")]
     end
 
     %% Tier 2: Storage & Transformation (Silver)
     subgraph T2_ETL ["Tier 2: Core ETL & Warehouse [Silver]"]
-        RAW_DB -->|Keyset Pagination: 10k Chunks| ETL[ETL Pipeline: pipeline.py]
-        ETL -->|Data Quality Gates: validate.py| DQ{Validation & Hashing}
-        DQ -->|Passes Crop Timeline| CROP[Crop & Normalise: transform.py]
-        CROP -->|Bulk SQL Inserts| OLAP_DB[(db-olap: PostgreSQL 18)]
-        OLAP_DB -->|dbt compile & run| DBT[dbt transformations]
-        DBT -->|Staging Views| STG_V[stg_constituencies, stg_readings, stg_stations]
-        STG_V -->|Analytical Marts| MART_F[fact_reading]
-        STG_V -->|Analytical Marts| MART_D[dim_station, dim_constituency]
+        RAW_DB -->|"Keyset Pagination: 10k Chunks"| ETL["ETL Pipeline: pipeline.py"]
+        ETL -->|"Data Quality Gates: validate.py"| DQ{"Validation & Hashing"}
+        DQ -->|"Passes Crop Timeline"| CROP["Crop & Normalise: transform.py"]
+        CROP -->|Bulk SQL Inserts| OLAP_DB[("db-olap: PostgreSQL 18")]
+        OLAP_DB -->|dbt compile & run| DBT["dbt transformations"]
+        DBT -->|Staging Views| STG_V["stg_constituencies, stg_readings, stg_stations"]
+        STG_V -->|Analytical Marts| MART_F["fact_reading"]
+        STG_V -->|Analytical Marts| MART_D["dim_station, dim_constituency"]
     end
 
     %% Tier 3: Replication & Serving (Gold)
     subgraph T3_Serving ["Tier 3: Document Serving [Gold]"]
-        MART_F & MART_D -->|Nested BSON Denormalization| NOSQL_SYNC[MongoDB replicator]
-        NOSQL_SYNC -->|Sub-second Read Cache| NOSQL_DB[(db-nosql: MongoDB 8.3)]
-        NOSQL_DB -->|Dashboard Serving| MONGO_Q[query_nosql.js]
+        MART_F & MART_D -->|"Nested BSON Denormalization"| NOSQL_SYNC["MongoDB replicator"]
+        NOSQL_SYNC -->|Sub-second Read Cache| NOSQL_DB[("db-nosql: MongoDB 8.3")]
+        NOSQL_DB -->|Dashboard Serving| MONGO_Q["query_nosql.js"]
     end
 ```
 

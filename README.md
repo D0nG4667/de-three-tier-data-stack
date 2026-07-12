@@ -40,37 +40,37 @@ The architecture follows a modular, decouplable topology running across isolated
 flowchart TD
     %% Ingestion Layer
     subgraph T1_Seeding ["Tier 1: Ingestion & Seeding [Container: db-raw-seeder]"]
-        CSV[air_quality_data_continuous.csv] -->|dlt (Postgres COPY)| SEED[Ingestion Engine: generator.py]
+        CSV["air_quality_data_continuous.csv"] -->|"dlt (Postgres COPY)"| SEED["Ingestion Engine: generator.py"]
     end
 
     %% Relational Raw Layer
     subgraph T1_DB ["Tier 1: Relational Raw Database [Container: db-raw]"]
-        SEED -->|Seeds Raw Schema| RAW_DB[(PostgreSQL 18)]
+        SEED -->|Seeds Raw Schema| RAW_DB[("PostgreSQL 18")]
     end
 
     %% Core ETL Layer
     subgraph T2_ETL ["Tier 2: Core ETL Pipeline [Container: etl-pipeline]"]
-        RAW_DB -->|Keyset Cursor Pagination: 10k Chunks| ETL[ETL Service: pipeline.py]
-        ETL -->|Data Quality Gates: validate.py| DQ{Validation & Hashing}
-        DQ -->|Fails Range Bounds| LOG[Warning & Critical Alarm Log]
-        DQ -->|Passes Crop Timeline| CROP[Crop & Normalise: transform.py]
+        RAW_DB -->|"Keyset Cursor Pagination: 10k Chunks"| ETL["ETL Service: pipeline.py"]
+        ETL -->|"Data Quality Gates: validate.py"| DQ{"Validation & Hashing"}
+        DQ -->|Fails Range Bounds| LOG["Warning & Critical Alarm Log"]
+        DQ -->|"Passes Crop Timeline"| CROP["Crop & Normalise: transform.py"]
     end
 
     %% Analytical Warehouse Layer
     subgraph T2_OLAP ["Tier 2: Analytical Serving Layer [Container: db-olap]"]
-        CROP -->|Bulk SQL Inserts| OLAP_DB[(PostgreSQL 18)]
-        OLAP_DB -->|dbt compile & run| DBT[dbt transformations]
-        DBT -->|Staging Views| STG_V[stg_constituencies, stg_readings, stg_stations]
-        STG_V -->|Analytical Marts| QUERY_A[Query A: Peak 2019 NOx]
-        STG_V -->|Analytical Marts| QUERY_B[Query B: 2019 Commute PM2.5]
-        STG_V -->|Analytical Marts| QUERY_C[Query C: 2010-19 Commute PM2.5]
+        CROP -->|Bulk SQL Inserts| OLAP_DB[("PostgreSQL 18")]
+        OLAP_DB -->|dbt compile & run| DBT["dbt transformations"]
+        DBT -->|Staging Views| STG_V["stg_constituencies, stg_readings, stg_stations"]
+        STG_V -->|Analytical Marts| QUERY_A["Query A: Peak 2019 NOx"]
+        STG_V -->|Analytical Marts| QUERY_B["Query B: 2019 Commute PM2.5"]
+        STG_V -->|Analytical Marts| QUERY_C["Query C: 2010-19 Commute PM2.5"]
     end
 
     %% NoSQL Cache Layer
     subgraph T3_Nosql ["Tier 3: Document Replica Layer [Container: db-nosql]"]
-        CROP -->|Direct SQL Metadata Join| NOSQL_MEM[Dynamic Postgres Lookup Map]
-        NOSQL_MEM -->|Denormalized Nested BSON Docs| NOSQL_DB[(MongoDB 8.3.4)]
-        NOSQL_DB -->|Sub-second Read Query| MONGO_Q[query_nosql.js]
+        CROP -->|Direct SQL Metadata Join| NOSQL_MEM["Dynamic Postgres Lookup Map"]
+        NOSQL_MEM -->|Denormalized Nested BSON Docs| NOSQL_DB[("MongoDB 8.3.4")]
+        NOSQL_DB -->|Sub-second Read Query| MONGO_Q["query_nosql.js"]
     end
 ```
 
