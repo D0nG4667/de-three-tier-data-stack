@@ -55,10 +55,36 @@ def replace_latex_in_text(text: str) -> str:
     # Regex: matches $ not preceded/followed by another $ or a curly brace { (to protect ${{...}})
     return re.sub(r'(?<!\$)\$(?!\$)(?!\{)([^$\n]+?)(?<!\$)\$(?!\$)', inline_repl, text)
 
+def replace_mermaid_blocks(text: str) -> str:
+    """
+    Scans a block of text, finds any fenced code blocks of type ```mermaid,
+    URL-safe Base64-encodes their content, and replaces them with a dynamically
+    rendered SVG image from the mermaid.ink CDN.
+    
+    Args:
+        text: The full Markdown content of a file.
+        
+    Returns:
+        The Markdown content with all Mermaid blocks replaced by SVG image links.
+    """
+    def mermaid_repl(match: Match[str]) -> str:
+        mermaid_code: str = match.group(1).strip()
+        # Encode to bytes, then base64
+        graph_bytes = mermaid_code.encode("utf-8")
+        base64_bytes = base64.urlsafe_b64encode(graph_bytes)
+        base64_string = base64_bytes.decode("ascii").strip("=")
+        
+        url = f"https://mermaid.ink/svg/{base64_string}?bgColor=white"
+        return f"\n\n![Mermaid Diagram]({url})\n\n"
+
+    # Regex matching ```mermaid ... ```
+    return re.sub(r'```mermaid\s*\n(.*?)\n```', mermaid_repl, text, flags=re.DOTALL)
+
 def replace_latex_and_paths(text: str) -> str:
     """
-    Applies display math LaTeX conversion, line-by-line inline LaTeX conversion
-    (excluding fenced code blocks), and relative image path rewriting to the document.
+    Applies Mermaid diagram compilation, display math LaTeX conversion,
+    line-by-line inline LaTeX conversion (excluding fenced code blocks),
+    and relative image path rewriting to the document.
     
     Args:
         text: The full Markdown content of a file.
@@ -66,7 +92,10 @@ def replace_latex_and_paths(text: str) -> str:
     Returns:
         The fully transformed Markdown content ready for Confluence sync.
     """
-    # 1. Convert Display Math ($$...$$) to Markdown image blocks
+    # 1. Convert Mermaid blocks to rendered SVG image links
+    text = replace_mermaid_blocks(text)
+
+    # 2. Convert Display Math ($$...$$) to Markdown image blocks
     def display_repl(match: Match[str]) -> str:
         math_content: str = match.group(1)
         url: str = encode_math(math_content)
@@ -74,7 +103,7 @@ def replace_latex_and_paths(text: str) -> str:
     
     text = re.sub(r'\$\$(.*?)\$\$', display_repl, text, flags=re.DOTALL)
     
-    # 2. Rewrite relative image paths (../assets/ -> docs/assets/) to avoid path traversal blocks
+    # 3. Rewrite relative image paths (../assets/ -> docs/assets/) to avoid path traversal blocks
     text = text.replace('../assets/', 'docs/assets/')
     
     # 3. Convert Inline Math line-by-line while ignoring code blocks
