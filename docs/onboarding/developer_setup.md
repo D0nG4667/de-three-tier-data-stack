@@ -238,3 +238,57 @@ To bridge code-driven engineering specs with business-facing wikis, we have esta
   - `CONFLUENCE_API_TOKEN`: Atlassian developer API token.
   - `CONFLUENCE_SPACE_KEY`: Key of the target Confluence space (e.g. `BRISTOLAIR`).
 
+---
+
+### Detailed Sync Architecture & Pipeline Sequence
+
+To keep repository docs and Confluence pages synchronized without polluting the Git tree or breaking local IDE previews, the synchronization pipeline executes a highly optimized six-stage lifecycle:
+
+```mermaid
+sequenceDiagram
+    participant Repo as Git Repository
+    participant Runner as GitHub Runner
+    participant Script1 as Pre-processor
+    participant Action as confluence-md Action
+    participant API as Confluence Cloud API
+    participant Script2 as Post-processor
+
+    Repo->>Runner: 1. Checkout Main Branch
+    Runner->>Runner: 2. Create docs_backup/ (Clean state)
+    Runner->>Script1: 3. Run pre-processor
+    Script1->>API: Query existing pages by Title (Reconciliation)
+    API-->>Script1: Return Confluence Page IDs
+    Script1->>Script1: Inject Page IDs & convert LaTeX & compile Mermaid to PNGs
+    Runner->>Action: 4. Execute Directory Sync
+    Action->>API: Publish updates & upload local attachments
+    API-->>Action: Return updated Frontmatter with Page IDs
+    Runner->>Script2: 5. Run post-processor
+    Script2->>Script2: Read new IDs & merge back to docs_backup/
+    Runner->>Runner: 6. Restore docs/ from docs_backup/ & purge preprocessed files
+    Runner->>Repo: 7. Commit & Push Page ID updates back [skip ci]
+```
+
+#### Stage-by-Stage Processing Logic
+
+1. **Auto-Reconciliation (Self-Healing State Mapping)**
+   If a markdown file lacks a `confluence_page_id` in its frontmatter, the pre-processor queries the Confluence API:
+   `GET /wiki/api/v2/pages?spaceKey={space_key}&title={title}`
+   If the page already exists under that title, its page ID is fetched and injected into the temporary frontmatter on the fly. This prevents duplicate page title conflicts (`HTTP 400 Bad Request`) and guarantees seamless synchronization with existing Confluence workspaces.
+
+2. **LaTeX and Mermaid Conversion**
+   * **LaTeX Math**: Inline formulas (`$...$`) and block equations (`$$...$$`) are translated into Markdown image tags referencing the **CodeCogs** SVG API.
+   * **Mermaid Diagrams**: Raw ` ```mermaid ` code blocks are compiled into URL-safe Base64 strings and replaced with image tags pointing to the **Mermaid.ink** PNG rendering CDN. (We use PNG format to bypass Confluence's default rendering limit on SVGs, ensuring charts scale correctly on the page).
+
+3. **Image Path Traversal Sanitation**
+   To keep your local Markdown previews working, images are written as `../assets/image.png`. During the preprocessing stage, the paths are rewritten to `docs/assets/image.png`. Combined with setting `attachments_base: "."` in the Action config, this allows images to resolve relative to the workspace root, bypassing the security path traversal checks.
+
+4. **Directory Sync & Post-processing**
+   The marketplace `7nohe/confluence-md` Action synchronizes the preprocessed `docs/` folder, creating pages and uploading attachments. The post-processor script then extracts any newly created Page IDs from the preprocessed folder frontmatter and merges them back into the clean backup folder (`docs_backup/`).
+
+5. **Clean Restoration**
+   The preprocessed folder is deleted, and the clean backup folder (now containing the newly updated Confluence Page IDs in the frontmatter) is restored to `docs/`. This ensures no temporary paths or CDN image references are committed back to your Git history.
+
+6. **State Push-Back**
+   The updated Page IDs are committed back to the repository using the `[skip ci]` commit tag to ensure the workflow does not trigger itself recursively.
+
+
