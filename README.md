@@ -98,6 +98,9 @@ Additionally, Dagster captures real-time ingestion metadata, checks table row in
 
 ```text
 de-three-tier-data-stack/
+├── .github/
+│   └── workflows/
+│       └── confluence_sync.yml # Automated GitOps documentation portal sync
 ├── config/
 │   ├── config.yaml          # Single source of truth for DB credentials, validation bounds, dates
 │   └── dbt_project.yml      # dbt project configurations
@@ -133,6 +136,10 @@ de-three-tier-data-stack/
 │   ├── query_nosql.js       # Target MongoDB querying engine
 │   ├── import_nosql.py      # Standalone seeder for Document store collection
 │   └── nosql.md             # Document store modeling and comparison report
+├── scripts/
+│   ├── confluence_sync_preprocessor.py  # LaTeX, Mermaid, and image path sync preprocessor
+│   ├── confluence_sync_postprocessor.py # Page ID metadata sync postprocessor
+│   └── prep_dagster_cloud.py            # dbt/Dagster Cloud helper seeder
 ├── src/
 │   ├── extract.py           # Keyset cursor-based DB extractor (prevents OOM limits)
 │   ├── generator.py         # Time-series weather & pollutant simulator / seeder
