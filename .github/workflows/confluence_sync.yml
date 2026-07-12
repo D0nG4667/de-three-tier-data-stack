@@ -22,14 +22,14 @@ jobs:
         # We perform temporary preprocessing on the runner so the repository remains clean:
         # 1. Back up clean docs: preserves original relative paths (../assets/) and standard LaTeX.
         # 2. Preprocess docs: confluence_sync_preprocessor.py translates $...$ inline math to high-res SVG image links
-        #    AND rewrites relative image paths (../assets/ -> docs/assets/) for path traversal checks.
+        #    AND rewrites relative image paths (../assets/ -> assets/) to align with the attachments_base configuration.
         run: |
           cp -R docs docs_backup
           python scripts/confluence_sync_preprocessor.py docs
 
       - name: Sync Markdown to Confluence
         # confluence-md converts GFM markdown to Confluence Cloud format and updates pages.
-        # Auto-creates missing pages under space_key/parent_page_id and writes IDs to frontmatter.
+        # Auto-creates missing pages under space_key and writes IDs to frontmatter.
         uses: 7nohe/confluence-md@v0.2.2
         with:
           confluence_base_url: "https://uwe-bristol-air.atlassian.net"
@@ -37,8 +37,7 @@ jobs:
           api_token: ${{ secrets.CONFLUENCE_API_TOKEN }}
           source: docs/
           space_key: ${{ secrets.CONFLUENCE_SPACE_KEY }}
-          parent_page_id: ${{ secrets.CONFLUENCE_PARENT_PAGE_ID }}
-          attachments_base: "."
+          attachments_base: "docs/"
           skip_if_unchanged: 'true'
 
       - name: Restore docs with generated page IDs

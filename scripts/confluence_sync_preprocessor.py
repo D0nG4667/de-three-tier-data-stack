@@ -39,13 +39,13 @@ def replace_latex_in_text(text: str) -> str:
         text: A single line of Markdown text.
         
     Returns:
-        The line of text with inline math blocks translated to HTML <img> tags.
+        The line of text with inline math blocks translated to Markdown image syntax.
     """
     def inline_repl(match: Match[str]) -> str:
         math_content: str = match.group(1)
         # Use \\inline&space; prefix to ensure proper vertical baseline alignment in Confluence
         url: str = encode_math(f'\\inline&space;{math_content}')
-        return f'<img src="{url}" alt="{math_content.strip()}" style="vertical-align: middle;" />'
+        return f'![{math_content.strip()}]({url})'
     
     # Regex: matches $ not preceded/followed by another $ or a curly brace { (to protect ${{...}})
     return re.sub(r'(?<!\$)\$(?!\$)(?!\{)([^$\n]+?)(?<!\$)\$(?!\$)', inline_repl, text)
@@ -61,16 +61,16 @@ def replace_latex_and_paths(text: str) -> str:
     Returns:
         The fully transformed Markdown content ready for Confluence sync.
     """
-    # 1. Convert Display Math ($$...$$) to centered SVG blocks
+    # 1. Convert Display Math ($$...$$) to Markdown image blocks
     def display_repl(match: Match[str]) -> str:
         math_content: str = match.group(1)
         url: str = encode_math(math_content)
-        return f'\n<p align="center"><img src="{url}" alt="{math_content.strip()}" /></p>\n'
+        return f'\n\n![{math_content.strip()}]({url})\n\n'
     
     text = re.sub(r'\$\$(.*?)\$\$', display_repl, text, flags=re.DOTALL)
     
-    # 2. Rewrite relative image paths (../assets/ -> docs/assets/) to avoid path traversal blocks
-    text = text.replace('../assets/', 'docs/assets/')
+    # 2. Rewrite relative image paths (../assets/ -> assets/) to align with attachments_base: "docs/"
+    text = text.replace('../assets/', 'assets/')
     
     # 3. Convert Inline Math line-by-line while ignoring code blocks
     lines = text.split('\n')
