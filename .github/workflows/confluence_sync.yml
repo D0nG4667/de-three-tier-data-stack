@@ -41,6 +41,7 @@ jobs:
           api_token: ${{ secrets.CONFLUENCE_API_TOKEN }}
           source: docs/
           space_key: ${{ secrets.CONFLUENCE_SPACE_KEY }}
+          attachments_base: "."
           skip_if_unchanged: 'true'
 
       - name: Restore docs with generated page IDs
