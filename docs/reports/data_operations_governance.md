@@ -1,7 +1,6 @@
 ---
 confluence_page_id: "98607"
 ---
-
 # Data Operations and Governance Specification
 **Project**: Bristol Air Quality Three-Tier Data Stack  
 

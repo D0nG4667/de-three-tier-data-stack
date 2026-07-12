@@ -1,7 +1,6 @@
 ---
 confluence_page_id: "65711"
 ---
-
 # Environmental Analytics Executive Report: Bristol Air Quality Data Stack
 **From**: Principal Data Engineer & Analytics Lead  
 **Date**: July 8, 2026  

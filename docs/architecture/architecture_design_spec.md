@@ -1,7 +1,6 @@
 ---
 confluence_page_id: "294935"
 ---
-
 # System Architecture Design Specification
 **Project**: Bristol Air Quality Three-Tier Data Stack  
 

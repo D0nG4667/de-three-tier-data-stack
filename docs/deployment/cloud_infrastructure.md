@@ -1,7 +1,6 @@
 ---
 confluence_page_id: "98565"
 ---
-
 # Cloud Infrastructure Deployment Roadmap
 
 This document outlines the provisioning guidelines, service architecture, and CI/CD pipelines required to deploy the three-tier Bristol Air Quality data stack to production in a public cloud (AWS).

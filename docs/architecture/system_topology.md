@@ -1,7 +1,6 @@
 ---
 confluence_page_id: "98542"
 ---
-
 # System Topology
 
 This document details the multi-container topology of the Bristol Air Quality data stack and describes how each tier maps to the medallion architecture stages.

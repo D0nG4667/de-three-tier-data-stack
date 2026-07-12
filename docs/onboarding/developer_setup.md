@@ -1,7 +1,6 @@
 ---
 confluence_page_id: "294956"
 ---
-
 # Developer Setup & Local Onboarding Guide
 
 Welcome to the Bristol Air Quality data stack! This document provides step-by-step instructions to boot the complete multi-container pipeline on your local machine, run test suites, compile models, and inspect the dashboards.
