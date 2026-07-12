@@ -16,12 +16,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Sync Markdown to Confluence
-        uses: jasonit/confluence-markdown-sync@v2
+        uses: gaurav-nelson/github-action-share-markdown-to-confluence@v3
         with:
           confluence_url: "https://uwe-bristol-air.atlassian.net/wiki"
           confluence_space: "${{ secrets.CONFLUENCE_SPACE_KEY }}"
           confluence_username: "${{ secrets.CONFLUENCE_EMAIL }}"
           confluence_password: "${{ secrets.CONFLUENCE_API_TOKEN }}"
-          markdown_dir: "docs"
-          # Sync directories as parent/child pages hierarchy automatically
+          md_file_path: "docs/**/*.md"
           parent_page_id: "${{ secrets.CONFLUENCE_PARENT_PAGE_ID }}"
