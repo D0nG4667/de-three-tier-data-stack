@@ -226,6 +226,7 @@ To bridge code-driven engineering specs with business-facing wikis, we have esta
 * **Workflow Location**: [.github/workflows/confluence_sync.yml](../../.github/workflows/confluence_sync.yml)
 * **Confluence Space Wiki**: [UWE Bristol Air Quality Space Overview](https://uwe-bristol-air.atlassian.net/wiki/spaces/uwebristol2026/overview?homepageId=262487)
 * **Under-the-hood Engine**: Uses the marketplace `7nohe/confluence-md@v0.2.2` Action.
+* **LaTeX and Mermaid Compilation**: Standard LaTeX equations (`$...$`) and Mermaid diagrams (` ```mermaid ` blocks) are dynamically converted to high-resolution web-compatible image tags (rendered by CodeCogs and Mermaid.ink respectively) on the fly during pre-processing, allowing them to render flawlessly on Confluence without requiring native space plugins.
 * **Attachments Resolution**: Local image references use standard relative paths (e.g., `../assets/`) to keep local previews working in your IDE. During CI/CD execution, the sync workflow automatically rewrites these references to root-relative paths temporarily for compatibility, avoiding path traversal failures.
 * **Frontmatter Mapping & Auto-Creation**: 
   - To sync directory structures, `confluence-md` reads each file's `confluence_page_id` in its YAML frontmatter.
