@@ -223,15 +223,14 @@ To bridge code-driven engineering specs with business-facing wikis, we have esta
 * **Workflow Location**: [.github/workflows/confluence_sync.yml](../../.github/workflows/confluence_sync.yml)
 * **Confluence Space Wiki**: [UWE Bristol Air Quality Space Overview](https://uwe-bristol-air.atlassian.net/wiki/spaces/uwebristol2026/overview?homepageId=262487)
 * **Under-the-hood Engine**: Uses the marketplace `7nohe/confluence-md@v0.2.2` Action.
-* **Attachments Resolution**: Configured with `attachments_base: "."` to resolve local image links (e.g. `../assets/`) relative to the repository workspace root, avoiding security-related path traversal blocks on the runner.
-* **Frontmatter Mapping Requirement**: For directory-level synchronization, each markdown file in the `docs/` folder must specify its own target Confluence Page ID in its YAML frontmatter block:
-  ```yaml
-  ---
-  confluence_page_id: "123456789"
-  ---
-  ```
-  *(Files without this frontmatter block will be ignored by the sync runner)*.
+* **Attachments Resolution**: Local image references use standard relative paths (e.g., `../assets/`) to keep local previews working in your IDE. During CI/CD execution, the sync workflow automatically rewrites these references to root-relative paths temporarily for compatibility, avoiding path traversal failures.
+* **Frontmatter Mapping & Auto-Creation**: 
+  - To sync directory structures, `confluence-md` reads each file's `confluence_page_id` in its YAML frontmatter.
+  - If a file is missing this key, the workflow uses your `CONFLUENCE_SPACE_KEY` and `CONFLUENCE_PARENT_PAGE_ID` to **automatically create the page on Confluence Cloud under the correct parent**.
+  - The workflow then writes the newly created Page ID back into the Markdown's frontmatter and automatically commits it back to the `main` branch (using `[skip ci]`), keeping your local and remote states synchronized.
 * **Required GitHub Secrets**:
   - `CONFLUENCE_EMAIL`: Account email for authentication.
   - `CONFLUENCE_API_TOKEN`: Atlassian developer API token.
+  - `CONFLUENCE_SPACE_KEY`: Key of the target Confluence space (e.g. `BRISTOLAIR`).
+  - `CONFLUENCE_PARENT_PAGE_ID`: ID of the parent page under which the wiki pages are dynamically created and nested.
 

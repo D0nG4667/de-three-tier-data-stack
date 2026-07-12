@@ -12,11 +12,24 @@ jobs:
   confluence-sync:
     name: Sync docs to Confluence Cloud
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository code
         uses: actions/checkout@v5
 
+      - name: Back up and pre-process docs (LaTeX & Paths)
+        # We perform temporary preprocessing on the runner so the repository remains clean:
+        # 1. Back up clean docs: preserves original relative paths (../assets/) and standard LaTeX.
+        # 2. Preprocess docs: confluence_sync_preprocessor.py translates $...$ inline math to high-res SVG image links
+        #    AND rewrites relative image paths (../assets/ -> docs/assets/) for path traversal checks.
+        run: |
+          cp -R docs docs_backup
+          python scripts/confluence_sync_preprocessor.py docs
+
       - name: Sync Markdown to Confluence
+        # confluence-md converts GFM markdown to Confluence Cloud format and updates pages.
+        # Auto-creates missing pages under space_key/parent_page_id and writes IDs to frontmatter.
         uses: 7nohe/confluence-md@v0.2.2
         with:
           confluence_base_url: "https://uwe-bristol-air.atlassian.net"
@@ -24,5 +37,27 @@ jobs:
           api_token: ${{ secrets.CONFLUENCE_API_TOKEN }}
           source: docs/
           space_key: ${{ secrets.CONFLUENCE_SPACE_KEY }}
+          parent_page_id: ${{ secrets.CONFLUENCE_PARENT_PAGE_ID }}
           attachments_base: "."
           skip_if_unchanged: 'true'
+
+      - name: Restore docs with generated page IDs
+        # To maintain local preview compatibility and clean git state:
+        # 1. confluence_sync_postprocessor.py: extracts generated page IDs and writes them to the clean backup's frontmatter.
+        # 2. Swap directories: replaces preprocessed files with clean backups containing only the page IDs.
+        run: |
+          python scripts/confluence_sync_postprocessor.py
+          rm -rf docs
+          cp -R docs_backup docs
+          rm -rf docs_backup
+
+      - name: Commit and push page ID updates
+        # Pushes newly generated Confluence Page IDs back to main. [skip ci] prevents recursive workflow triggering.
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs/
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(docs): update Confluence page IDs in frontmatter [skip ci]"
+            git push
+          fi
