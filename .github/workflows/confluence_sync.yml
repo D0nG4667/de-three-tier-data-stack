@@ -17,11 +17,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Sync Markdown to Confluence
-        uses: martinsalerno/github-to-confluence-action@v4
+        uses: 7nohe/confluence-md@v1
         with:
-          confluence-base-url: 'https://uwe-bristol-air.atlassian.net/wiki'
-          confluence-api-token: ${{ secrets.CONFLUENCE_API_TOKEN }}
-          confluence-username: ${{ secrets.CONFLUENCE_EMAIL }}
-          confluence-space-key: ${{ secrets.CONFLUENCE_SPACE_KEY }}
-          confluence-parent-page-id: ${{ secrets.CONFLUENCE_PARENT_PAGE_ID }}
-          markdown-root: docs
+          confluence_base_url: "https://uwe-bristol-air.atlassian.net"
+          email: ${{ secrets.CONFLUENCE_EMAIL }}
+          api_token: ${{ secrets.CONFLUENCE_API_TOKEN }}
+          source: docs/
+          skip_if_unchanged: 'true'

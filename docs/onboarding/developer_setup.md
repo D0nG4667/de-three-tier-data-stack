@@ -185,12 +185,12 @@ graph TD
     Stage3["Stage 3: production<br>(Slim runtime, no dev/test libraries)"]
     Stage4["Stage 4: development<br>(Includes dev deps, tests/, pytest run)"]
 
-    Stage1 ──► Stage2
-    Stage2 ──► Stage3
-    Stage2 ──► Stage4
+    Stage1 --> Stage2
+    Stage2 --> Stage3
+    Stage2 --> Stage4
 
-    style Stage3 fill:#d4edda,stroke:#28a745,stroke-width:2px;
-    style Stage4 fill:#fff3cd,stroke:#ffc107,stroke-width:2px;
+    style Stage3 fill:#d4edda,stroke:#28a745,stroke-width:2px,color:#155724;
+    style Stage4 fill:#fff3cd,stroke:#ffc107,stroke-width:2px,color:#856404;
 ```
 
 
@@ -219,12 +219,17 @@ To enable developers and analytics engineers to browse table schemas, descriptio
 ### GitOps Confluence Integration Sync
 To bridge code-driven engineering specs with business-facing wikis, we have established a **GitOps Documentation Sync Pipeline** using GitHub Actions:
 
-* **Workflow Trigger**: Runs automatically on any push or merge events to the `main` branch affecting documentation files (`docs/**`).
+* **Workflow Trigger**: Runs automatically on any push or merge events to the `main` branch affecting documentation files (`docs/**`), or manually via the `workflow_dispatch` button.
 * **Workflow Location**: [.github/workflows/confluence_sync.yml](../../.github/workflows/confluence_sync.yml)
-* **Confluence Target Space**: Link to space wiki [uwe-bristol-air.atlassian.net/wiki](https://uwe-bristol-air.atlassian.net/wiki)
+* **Under-the-hood Engine**: Uses the marketplace `7nohe/confluence-md@v1` Action.
+* **Frontmatter Mapping Requirement**: For directory-level synchronization, each markdown file in the `docs/` folder must specify its own target Confluence Page ID in its YAML frontmatter block:
+  ```yaml
+  ---
+  confluence_page_id: "123456789"
+  ---
+  ```
+  *(Files without this frontmatter block will be ignored by the sync runner)*.
 * **Required GitHub Secrets**:
-  - `CONFLUENCE_SPACE_KEY`: Key of the target Confluence space (e.g. `BRISTOLAIR`).
   - `CONFLUENCE_EMAIL`: Account email for authentication.
   - `CONFLUENCE_API_TOKEN`: Atlassian developer API token.
-  - `CONFLUENCE_PARENT_PAGE_ID`: ID of the parent page under which the wiki page directory tree is automatically mirrored.
 
